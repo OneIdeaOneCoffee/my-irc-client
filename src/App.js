@@ -7,9 +7,15 @@ const Power = ({ size = 16 }) => <span style={{fontWeight:"bold",fontSize:size}}
 const Send = ({ size = 16 }) => <span style={{fontWeight:"bold",fontSize:size}}>✉️</span>;
 const User = ({ size = 16 }) => <span style={{fontWeight:"bold",fontSize:size}}>👤</span>;
 
-class BufferManager {/* ... igual ... */}
-class IRCParser {/* ... igual ... */}
-class IRCClient {/* ... igual ... */}
+class BufferManager {}
+class IRCParser {}
+class IRCClient {
+  on() {}
+  connect() {}
+  disconnect() {}
+  send() {}
+}
+
 
 const DEFAULT_COMMANDS = [
   { cmd: "JOIN #Chat", label: "Entrar canal" },
