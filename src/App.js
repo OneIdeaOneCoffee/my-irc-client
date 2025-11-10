@@ -158,14 +158,14 @@ class IRCClient {
 }
 
 const DEFAULT_COMMANDS = [
-  { cmd: "JOIN #Chat", label: "Entrar canal" },
-  { cmd: "PART #Chat", label: "Sair canal" },
+  { cmd: "JOIN #test", label: "Entrar canal #test" },
+  { cmd: "PART #test", label: "Sair canal #test" },
   { cmd: "LEAVE", label: "Desconectar" },
   { cmd: "NICK NovoNick", label: "Trocar nick" },
-  { cmd: "WHO #Chat", label: "Quem está online" },
-  { cmd: "TOPIC #Chat Novo tópico", label: "Alterar tópico" },
+  { cmd: "WHO #test", label: "Quem está online" },
+  { cmd: "TOPIC #test Novo tópico", label: "Alterar tópico" },
   { cmd: "AWAY Estou ausente", label: "Ausente" },
-  { cmd: "INVITE Nick #Chat", label: "Convidar" },
+  { cmd: "INVITE Nick #test", label: "Convidar" },
   { cmd: "NOTICE Nick Olá!", label: "Aviso privado" },
   { cmd: "PRIVMSG Nick Olá!", label: "Mensagem privada" }
 ];
@@ -181,7 +181,7 @@ export default function IRCEngineDemo() {
   });
   const [commandInput, setCommandInput] = useState("");
   const [channelUsers, setChannelUsers] = useState([]);
-  const [currentChannel, setCurrentChannel] = useState("#Chat");
+  const [currentChannel, setCurrentChannel] = useState("#test");
   const [chatMessages, setChatMessages] = useState([]);
   
   const wsServers = [
@@ -190,21 +190,16 @@ export default function IRCEngineDemo() {
   ];
   const clientRef = useRef(null);
 
-  const addLog = (type, data, channel = currentChannel) => {
-    const newLog = { time: new Date().toLocaleTimeString(), type, data, channel };
-    
-    // Console IRC: SEMPRE adiciona todos os logs
-    setLogs((prev) => [...prev, newLog].slice(-300));
+  // Função separada para adicionar ao CHAT
+  const addToChat = (type, data) => {
+    const newLog = { time: new Date().toLocaleTimeString(), type, data };
+    setChatMessages((prev) => [...prev, newLog].slice(-300));
+  };
 
-    // Chat: APENAS mensagens do canal atual
-    if (channel === currentChannel && (
-      type === "message" ||
-      type === "join" ||
-      type === "part" ||
-      type === "names"
-    )) {
-      setChatMessages((prev) => [...prev, newLog].slice(-300));
-    }
+  // Função separada para adicionar ao CONSOLE IRC
+  const addToConsole = (type, data) => {
+    const newLog = { time: new Date().toLocaleTimeString(), type, data };
+    setLogs((prev) => [...prev, newLog].slice(-300));
   };
 
   const handleConnect = () => {
@@ -213,50 +208,83 @@ export default function IRCEngineDemo() {
     
     client.on("state", (data) => { 
       setState(data.state); 
-      addLog("state", `Estado: ${data.state}`); 
+      addToConsole("state", `Estado: ${data.state}`); 
     });
     
-    client.on("debug", (data) => addLog("debug", data.msg));
-    client.on("registered", () => addLog("success", "Conectado! Agora você pode enviar JOIN #canal"));
-    client.on("ping", () => addLog("ping", "PING recebido e respondido automaticamente"));
+    client.on("debug", (data) => addToConsole("debug", data.msg));
+    client.on("registered", () => {
+      addToConsole("success", "Conectado! Agora você pode enviar JOIN #canal");
+      addToChat("info", "Conectado ao servidor IRC. Use JOIN #canal para entrar em um canal.");
+    });
+    client.on("ping", () => addToConsole("ping", "PING recebido e respondido automaticamente"));
     
     client.on("message", (msg) => {
       const prefix = msg.isChannel ? `[${msg.to}]` : `[PM]`;
-      addLog("message", `${prefix} <${msg.from}> ${msg.text}`, msg.to);
+      const messageText = `${prefix} <${msg.from}> ${msg.text}`;
+      
+      // Se for mensagem do canal atual, vai para o CHAT
+      if (msg.to === currentChannel) {
+        addToChat("message", messageText);
+      }
+      // Se for mensagem privada ou de outro canal, vai para o CONSOLE
+      else {
+        addToConsole("message", messageText);
+      }
     });
     
     client.on("join", (data) => {
-      addLog("join", `${data.nick} entrou em ${data.channel}`, data.channel);
-      if (data.channel === currentChannel && !channelUsers.includes(data.nick)) {
-        setChannelUsers((users) => Array.from(new Set([...users, data.nick])));
+      // Se for no canal atual, vai para o CHAT
+      if (data.channel === currentChannel) {
+        addToChat("join", `${data.nick} entrou no canal`);
+        if (!channelUsers.includes(data.nick)) {
+          setChannelUsers((users) => Array.from(new Set([...users, data.nick])));
+        }
+      }
+      // Se for em outro canal, vai para o CONSOLE
+      else {
+        addToConsole("join", `${data.nick} entrou em ${data.channel}`);
       }
     });
     
     client.on("part", (data) => {
-      addLog("part", `${data.nick} saiu de ${data.channel}`, data.channel);
+      // Se for do canal atual, vai para o CHAT
       if (data.channel === currentChannel) {
+        addToChat("part", `${data.nick} saiu do canal`);
         setChannelUsers((users) => users.filter(nick => nick !== data.nick));
+      }
+      // Se for de outro canal, vai para o CONSOLE
+      else {
+        addToConsole("part", `${data.nick} saiu de ${data.channel}`);
       }
     });
     
     client.on("names", (data) => {
-      addLog("names", `Usuários em ${data.channel}: ${data.users.join(", ")}`, data.channel);
-      if (data.channel === currentChannel) setChannelUsers(data.users);
+      // Se for do canal atual, vai para o CHAT e atualiza usuários
+      if (data.channel === currentChannel) {
+        addToChat("names", `Usuários no canal: ${data.users.join(", ")}`);
+        setChannelUsers(data.users);
+      }
+      // Se for de outro canal, vai para o CONSOLE
+      else {
+        addToConsole("names", `Usuários em ${data.channel}: ${data.users.join(", ")}`);
+      }
     });
     
-    client.on("raw", (msg) => addLog("raw", msg.raw));
-    client.on("error", (data) => addLog("error", `WebSocket Error: ${data.type} | ReadyState: ${data.readyState} | URL: ${data.url}`));
+    client.on("raw", (msg) => addToConsole("raw", msg.raw));
+    client.on("error", (data) => addToConsole("error", `WebSocket Error: ${data.type} | ReadyState: ${data.readyState} | URL: ${data.url}`));
     
     client.connect(config.url, config.nick, config.user, config.realname);
   };
 
   const handleDisconnect = () => { 
     if (clientRef.current) clientRef.current.disconnect(); 
+    setChatMessages([]);
+    setChannelUsers([]);
   };
 
   const handleCommand = (cmd) => {
     if (!clientRef.current || state !== "connected") {
-      addLog("error", "Não conectado!");
+      addToConsole("error", "Não conectado!");
       return;
     }
     
@@ -267,19 +295,25 @@ export default function IRCEngineDemo() {
     }
     
     clientRef.current.send(cmd);
-    addLog("sent", `→ ${cmd}`);
+    addToConsole("sent", `→ ${cmd}`);
     
     if (/^JOIN\s+[#\w]+/i.test(cmd)) {
       const ch = cmd.split(" ")[1];
       setCurrentChannel(ch);
       setChannelUsers([]);
       setChatMessages([]);
-      addLog("info", `Canal alterado para: ${ch}`);
+      addToChat("info", `Entrou no canal: ${ch}`);
+      addToConsole("info", `Canal alterado para: ${ch}`);
     }
     
     if (/^PART\s+[#\w]+/i.test(cmd)) {
-      setChannelUsers([]);
-      setChatMessages([]);
+      const ch = cmd.split(" ")[1];
+      if (ch === currentChannel) {
+        setChannelUsers([]);
+        setChatMessages([]);
+        setCurrentChannel("");
+        addToChat("info", "Saiu do canal");
+      }
     }
   };
 
@@ -290,20 +324,15 @@ export default function IRCEngineDemo() {
         handleCommand(commandInput.slice(1));
       } else {
         // Mensagem normal para o canal atual
-        if (currentChannel) {
+        if (currentChannel && clientRef.current) {
           clientRef.current.privmsg(currentChannel, commandInput);
-          addLog("message", `[${currentChannel}] <${config.nick}> ${commandInput}`, currentChannel);
+          addToChat("message", `[${currentChannel}] <${config.nick}> ${commandInput}`);
+        } else {
+          addToConsole("error", "Não está em nenhum canal!");
         }
       }
       setCommandInput(""); 
     } 
-  };
-
-  // Filter function for console logs - EXCLUI apenas mensagens do chat do canal atual
-  const shouldShowInConsole = (log) => {
-    // Mostra TUDO no console, exceto mensagens do chat do canal atual
-    return !(log.channel === currentChannel && 
-           ["message", "join", "part", "names"].includes(log.type));
   };
 
   return (
@@ -358,28 +387,33 @@ export default function IRCEngineDemo() {
               <div className="row chat-area">
                 {/* Usuários */}
                 <div className="users-list">
-                  <h4 className="userlist-title"><User /> Usuários ({channelUsers.length}):</h4>
+                  <h4 className="userlist-title"><User /> Usuários em {currentChannel} ({channelUsers.length}):</h4>
                   <div className="userlist-list">
-                    {channelUsers.length === 0 && <div className="userlist-empty">Nenhum usuário listado.</div>}
-                    {channelUsers.map((u, i) => (<div key={i} className="userlist-item">{u}</div>))}
+                    {channelUsers.length === 0 && <div className="userlist-empty">Nenhum usuário listado</div>}
+                    {channelUsers.map((u, i) => (
+                      <div key={i} className="userlist-item">{u}</div>
+                    ))}
                   </div>
                 </div>
                 
                 {/* Chat Principal */}
                 <div className="chat-messages">
-                  <h4 className="chat-title">Chat: <span style={{ color: "#54a0ff" }}>{currentChannel}</span></h4>
+                  <h4 className="chat-title">Chat: <span style={{ color: "#54a0ff" }}>{currentChannel || "Nenhum canal"}</span></h4>
                   <div className="console-list chat-console">
-                    {chatMessages.length === 0 && (
+                    {chatMessages.length === 0 ? (
                       <div className="console-msg console-msg-default">
-                        Nenhuma mensagem ainda. Use "JOIN #canal" para entrar em um canal.
+                        {currentChannel 
+                          ? "Nenhuma mensagem ainda. Digite algo para começar a conversar!" 
+                          : "Use 'JOIN #canal' para entrar em um canal de chat."}
                       </div>
+                    ) : (
+                      chatMessages.map((log, i) => (
+                        <div key={i} className={`console-msg console-msg-${log.type}`}>
+                          <span className="console-time">{log.time}</span>
+                          <span className="console-text">{log.data}</span>
+                        </div>
+                      ))
                     )}
-                    {chatMessages.map((log, i) => (
-                      <div key={i} className={`console-msg console-msg-${log.type}`}>
-                        <span className="console-time">{log.time}</span>
-                        <span className="console-text">{log.data}</span>
-                      </div>
-                    ))}
                   </div>
                   <div className="row">
                     <input 
@@ -388,7 +422,9 @@ export default function IRCEngineDemo() {
                       onChange={e => setCommandInput(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && handleSendCommand()}
                       className="input" 
-                      placeholder={`Mensagem para ${currentChannel} (ou /comando)`} 
+                      placeholder={currentChannel 
+                        ? `Mensagem para ${currentChannel} (ou /comando)` 
+                        : "Digite /JOIN #canal para entrar em um canal"} 
                     />
                     <button className="button connect" onClick={handleSendCommand}>
                       <Send />
@@ -409,25 +445,23 @@ export default function IRCEngineDemo() {
               </div>
             </div>
             
-            {/* Console IRC - TODOS os eventos (exceto mensagens do chat) */}
+            {/* Console IRC - TODOS os eventos técnicos */}
             <div className="irc-console-block">
               <div className="card console-card">
-                <h3 className="console-heading">Console IRC (todos eventos)</h3>
+                <h3 className="console-heading">Console IRC (eventos técnicos)</h3>
                 <div className="console-list irc-console-list">
-                  {logs.length === 0 && (
+                  {logs.length === 0 ? (
                     <div className="console-msg console-msg-default italic">
-                      Aguardando conexão...
+                      Aguardando eventos IRC...
                     </div>
-                  )}
-                  {logs
-                    .filter(log => shouldShowInConsole(log))
-                    .map((log, i) => (
+                  ) : (
+                    logs.map((log, i) => (
                       <div key={i} className={`console-msg console-msg-${log.type}`}>
                         <span className="console-time">{log.time}</span>
                         <span className="console-text">{log.data}</span>
                       </div>
                     ))
-                  }
+                  )}
                 </div>
               </div>
             </div>
@@ -447,10 +481,10 @@ export default function IRCEngineDemo() {
                 <li>Clique em "Conectar"</li>
                 <li>Aguarde o estado mudar para "connected" (~2-3 segundos)</li>
                 <li>Clique em "JOIN #test" para entrar no canal público</li>
-                <li>Observe mensagens raw no chat</li>
-                <li>PING será respondido automaticamente (amarelo no log)</li>
+                <li>Digite mensagens no campo de texto</li>
+                <li>Veja as mensagens do chat na janela principal e eventos técnicos no console abaixo</li>
               </ol>
-              <p className="warn">⚠️ Se Libera.Chat não funcionar, é porque ele não aceita WebSocket direto sem WEBIRC.</p>
+              <p className="warn">⚠️ Use /comando para comandos IRC (ex: /JOIN #test) ou texto normal para mensagens</p>
             </div>
           </div>
         </div>
