@@ -187,3 +187,31 @@ select.input { margin-bottom: 14px; }
 
 /* Helper */
 .italic { font-style: italic;}
+
+/* ... mantenha seu CSS existente ... */
+
+.chat-area { width: 100%; gap: 18px; display: flex; }
+.users-list {
+  background: #212c3b;
+  border-radius: 16px;
+  min-width: 160px;
+  max-width: 200px;
+  padding: 16px 10px;
+  margin-right: 14px;
+  box-shadow: 0 2px 8px #0002;
+  display: flex; flex-direction: column;
+}
+.userlist-title { font-weight: bold; font-size: 1.1em; margin-bottom: 12px;}
+.userlist-list { display: flex; flex-direction: column; gap: 7px; }
+.userlist-item { font-weight: 600; color: #54a0ff; background: #1c2030; padding: 3px 9px; border-radius: 8px;}
+.userlist-empty { font-style: italic; color: #888;}
+.chat-messages { flex: 1; display: flex; flex-direction: column;}
+.chat-title { color: #77c2ff; font-size: 1.09em; font-weight: bold; margin-bottom: 7px;}
+.chat-console { min-height: 200px; max-height: 260px; overflow-y: auto; margin-bottom: 12px;}
+.cmd-btns-area { margin-top: 6px;}
+.cmd-btns-row { display: flex; flex-wrap: wrap; gap: 7px; }
+
+@media (max-width: 700px) {
+  .chat-area { flex-direction: column; }
+  .users-list { margin-right: 0; min-width: 100%; }
+}
