@@ -215,3 +215,35 @@ select.input { margin-bottom: 14px; }
   .chat-area { flex-direction: column; }
   .users-list { margin-right: 0; min-width: 100%; }
 }
+
+/* Acrescente ao fim do seu App.css */
+
+.main-irc-row {
+  display: flex;
+  gap: 22px;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.chat-users-block {
+  flex: 2;
+  min-width: 0;
+}
+
+.irc-console-block {
+  flex: 1.1;
+  min-width: 0;
+}
+
+.irc-console-list {
+  max-height: 420px;
+  min-height: 240px;
+  overflow-y: auto;
+  font-size: .97rem;
+}
+
+/* responsividade */
+@media (max-width: 1150px) {
+  .main-irc-row { flex-direction: column;}
+  .irc-console-block { margin-top: 18px; }
+}
