@@ -132,7 +132,6 @@ export default function IRCEngineDemo() {
   ];
   const clientRef = useRef(null);
 
-  // Adiciona log para console e chat
   const addLog = (type, data, channel = currentChannel) => {
     setLogs((prev) => [
       ...prev,
@@ -237,10 +236,9 @@ export default function IRCEngineDemo() {
           </div>
         </div>
 
-        {/* Main: Chat + Usuários + Comandos + Console separado */}
+        {/* Main: Chat + Usuários + Comandos */}
         {state === "connected" && (
-          <div className="main-irc-row">
-            {/* Área principal */}
+          <>
             <div className="chat-users-block">
               <div className="row chat-area">
                 {/* Usuários */}
@@ -282,7 +280,7 @@ export default function IRCEngineDemo() {
                 </div>
               </div>
             </div>
-            {/* Console IRC SEPARADO */}
+            {/* Console IRC SEPARADO ABAIXO */}
             <div className="irc-console-block">
               <div className="card console-card">
                 <h3 className="console-heading">Console IRC (todos eventos)</h3>
@@ -304,7 +302,7 @@ export default function IRCEngineDemo() {
                 </div>
               </div>
             </div>
-          </div>
+          </>
         )}
 
         <div className="divider"></div>
