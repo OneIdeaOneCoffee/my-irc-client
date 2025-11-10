@@ -1,15 +1,15 @@
 import React, { useState, useRef } from "react";
 import "./App.css";
 
-// Ícones simplificados (podem trocar depois)
+// Ícones simples (customize como quiser!)
 const Radio = ({ className = "", size = 20 }) => <span className={`radio-icon ${className}`} style={{ width: size, height: size }} />;
 const Power = ({ size = 16 }) => <span style={{fontWeight:"bold",fontSize:size}}>⏻</span>;
 const Send = ({ size = 16 }) => <span style={{fontWeight:"bold",fontSize:size}}>✉️</span>;
 const User = ({ size = 16 }) => <span style={{fontWeight:"bold",fontSize:size}}>👤</span>;
 
-class BufferManager {/* ... igual como antes ... */}
-class IRCParser {/* ... igual como antes ... */}
-class IRCClient {/* ... igual como antes ... */}
+class BufferManager {/* ... igual ... */}
+class IRCParser {/* ... igual ... */}
+class IRCClient {/* ... igual ... */}
 
 const DEFAULT_COMMANDS = [
   { cmd: "JOIN #Chat", label: "Entrar canal" },
@@ -42,13 +42,15 @@ export default function IRCEngineDemo() {
   ];
   const clientRef = useRef(null);
 
+  // Adiciona log para tanto console quanto chat
   const addLog = (type, data, channel = currentChannel) => {
     setLogs((prev) => [
       ...prev,
       { time: new Date().toLocaleTimeString(), type, data, channel },
-    ].slice(-200));
+    ].slice(-300));
   };
 
+  // Setups IRC (igual antes)
   const handleConnect = () => {
     const client = new IRCClient();
     clientRef.current = client;
@@ -94,7 +96,6 @@ export default function IRCEngineDemo() {
     }
     clientRef.current.send(cmd);
     addLog("sent", `→ ${cmd}`);
-    // Detecta comandos de canal para ajustar área:
     if (/^JOIN\s+[#\w]+/i.test(cmd)) {
       const ch = cmd.split(" ")[1];
       setCurrentChannel(ch);
@@ -111,8 +112,10 @@ export default function IRCEngineDemo() {
     }
   };
 
-  // Logs só do canal atual:
-  const filteredLogs = logs.filter(l => l.channel === currentChannel || l.type === "state" || l.type === "success" || l.type === "error");
+  // Só mostra chat do canal
+  const chatLogs = logs.filter(l => l.channel === currentChannel && (l.type === "message" || l.type === "join" || l.type === "part" || l.type === "names"));
+  // Console: mostra tudo (raw, debug, errors, sent, state, success, ping, etc.)
+  const consoleLogs = logs;
 
   return (
     <div className="app-root">
@@ -156,48 +159,72 @@ export default function IRCEngineDemo() {
           </div>
         </div>
 
-        {/* Após entrar no chat */}
+        {/* Interface chat + usuários + comandos + console */}
         {state === "connected" && (
-          <div className="row card chat-area">
-            {/* Users list */}
-            <div className="users-list">
-              <h4 className="userlist-title"><User /> Usuários ({channelUsers.length}):</h4>
-              <div className="userlist-list">
-                {channelUsers.length === 0 && <div className="userlist-empty">Nenhum usuário listado.</div>}
-                {channelUsers.map((u, i) => (<div key={i} className="userlist-item">{u}</div>))}
-              </div>
-            </div>
-            {/* Chat/messages area */}
-            <div className="chat-messages">
-              <h4 className="chat-title">Chat: <span style={{color:"#54a0ff"}}>{currentChannel}</span></h4>
-              <div className="console-list chat-console">
-                {filteredLogs.length === 0 && <div className="console-msg console-msg-default">Sem mensagens ainda.</div>}
-                {filteredLogs.map((log, i) => (
-                  <div key={i} className={`console-msg console-msg-${log.type}`}>
-                    <span className="console-time">{log.time}</span>
-                    <span className="console-text">{log.data}</span>
+          <div className="main-irc-row">
+            {/* Área principal (chat e usuários) */}
+            <div className="chat-users-block">
+              <div className="row chat-area">
+                {/* Users */}
+                <div className="users-list">
+                  <h4 className="userlist-title"><User /> Usuários ({channelUsers.length}):</h4>
+                  <div className="userlist-list">
+                    {channelUsers.length === 0 && <div className="userlist-empty">Nenhum usuário listado.</div>}
+                    {channelUsers.map((u, i) => (<div key={i} className="userlist-item">{u}</div>))}
                   </div>
-                ))}
+                </div>
+                {/* Chat/messages area */}
+                <div className="chat-messages">
+                  <h4 className="chat-title">Chat: <span style={{color:"#54a0ff"}}>{currentChannel}</span></h4>
+                  <div className="console-list chat-console">
+                    {chatLogs.length === 0 && <div className="console-msg console-msg-default">Sem mensagens ainda.</div>}
+                    {chatLogs.map((log, i) => (
+                      <div key={i} className={`console-msg console-msg-${log.type}`}>
+                        <span className="console-time">{log.time}</span>
+                        <span className="console-text">{log.data}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="row">
+                    <input type="text" value={commandInput} onChange={e => setCommandInput(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && handleSendCommand()}
+                      className="input" placeholder={`Digite para enviar ao canal (${currentChannel})`} />
+                    <button className="button connect" onClick={handleSendCommand}><Send /></button>
+                  </div>
+                </div>
               </div>
-              <div className="row">
-                <input type="text" value={commandInput} onChange={e => setCommandInput(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleSendCommand()}
-                  className="input" placeholder={`Digite para enviar ao canal (${currentChannel})`} />
-                <button className="button connect" onClick={handleSendCommand}><Send /></button>
+              {/* Botões comandos IRC */}
+              <div className="card cmd-btns-area">
+                <div className="cmd-btns-row">
+                  {DEFAULT_COMMANDS.map(({ cmd, label }, i) => (
+                    <button key={i} className={`button alt`} onClick={() => handleCommand(cmd)} title={cmd}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Botões comandos IRC */}
-        {state === "connected" && (
-          <div className="card cmd-btns-area">
-            <div className="cmd-btns-row">
-              {DEFAULT_COMMANDS.map(({ cmd, label }, i) => (
-                <button key={i} className={`button alt`} onClick={() => handleCommand(cmd)} title={cmd}>
-                  {label}
-                </button>
-              ))}
+            {/* Console IRC SEPARADO */}
+            <div className="irc-console-block">
+              <div className="card console-card">
+                <h3 className="console-heading">Console IRC (todos eventos)</h3>
+                <div className="console-list irc-console-list">
+                  {consoleLogs.length === 0 && (
+                    <div className="console-msg console-msg-default italic">
+                      Aguardando conexão...
+                    </div>
+                  )}
+                  {consoleLogs.map((log, i) => (
+                    <div
+                      key={i}
+                      className={`console-msg console-msg-${log.type}`}
+                    >
+                      <span className="console-time">{log.time}</span>
+                      <span className="console-text">{log.data}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
