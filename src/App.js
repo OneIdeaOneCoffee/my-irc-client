@@ -226,7 +226,7 @@ class IRCClient {
 }
 
 // ============================================================================
-// UI DE TESTE
+// UI DE TESTE (melhorada)
 // ============================================================================
 export default function IRCEngineDemo() {
   const [logs, setLogs] = useState([]);
@@ -340,105 +340,117 @@ export default function IRCEngineDemo() {
     connected: 'text-green-500'
   };
 
+  // Novos estilos
+  const sectionBg = "bg-white/90 dark:bg-gray-950/95";
+  const cardBg = "bg-white/80 dark:bg-gray-900/85";
+  const heading = "font-bold text-lg md:text-2xl text-gray-900 dark:text-gray-100";
+  const subheading = "font-medium text-base text-gray-700 dark:text-gray-300";
+  const divider = "border-b border-gray-300 dark:border-gray-800 my-6";
+  const labelClass = "block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 tracking-wide";
+  const inputClass = "w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 mb-3 transition focus:outline-none focus:ring-2 focus:ring-blue-500";
+  const buttonPrimary = "px-4 py-2 rounded-lg font-bold bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 transition disabled:bg-gray-300 disabled:text-gray-500 flex items-center gap-2 text-sm";
+  const buttonSecondary = "px-4 py-2 rounded-lg font-bold bg-gray-200 text-gray-900 hover:bg-gray-300 transition disabled:bg-gray-100 flex items-center gap-2 text-sm";
+  const buttonDanger = "px-4 py-2 rounded-lg font-bold bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-400 transition flex items-center gap-2 text-sm";
+  const consoleTypes = {
+    error: 'bg-red-50 text-red-900 border-l-4 border-red-500',
+    success: 'bg-green-50 text-green-900 border-l-4 border-green-500',
+    ping: 'bg-yellow-50 text-yellow-900 border-l-4 border-yellow-500',
+    message: 'bg-cyan-50 text-cyan-900 border-l-4 border-cyan-500',
+    join: 'bg-green-100 text-green-900 border-l-4 border-green-400',
+    part: 'bg-orange-50 text-orange-900 border-l-4 border-orange-400',
+    names: 'bg-purple-50 text-purple-900 border-l-4 border-purple-400',
+    sent: 'bg-blue-50 text-blue-900 border-l-4 border-blue-400',
+    state: 'bg-blue-50 text-blue-900 border-l-4 border-blue-400',
+    debug: 'bg-gray-50 text-gray-700 border-l-4 border-gray-400',
+    raw: 'bg-gray-100 text-gray-800 border-l-4 border-gray-300',
+    default: 'bg-gray-50 text-gray-700 border-l-4 border-gray-200'
+  };
+
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className={`min-h-screen w-full ${sectionBg} text-gray-900 dark:text-gray-100 pt-4`}>
+      <div className="mx-auto w-full max-w-3xl md:max-w-4xl px-3 flex flex-col gap-10">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className={`flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0 p-4 rounded-lg ${cardBg} shadow-lg`}>
           <div>
-            <h1 className="text-3xl font-bold">IRC Engine (Stateless)</h1>
-            <p className="text-gray-400 mt-1">WebSocket + Parser + Event Emitter</p>
+            <h1 className={`${heading}`}>IRC Engine (Stateless)</h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">WebSocket + Parser + Event Emitter</p>
           </div>
           <div className="flex items-center gap-3">
-            <Radio className={stateColors[state]} size={20} />
-            <span className="text-sm font-mono">{state}</span>
+            <Radio className={stateColors[state]} size={22} />
+            <span className="text-base font-mono">{state}</span>
           </div>
         </div>
 
+        <div className={`${divider}`}></div>
+
         {/* Config */}
-        <div className="bg-gray-800 rounded-lg p-4 space-y-3">
-          <div className="space-y-2">
-            <label className="text-xs text-gray-400">Servidor WebSocket</label>
-            <select
-              value={config.url}
-              onChange={(e) => setConfig({...config, url: e.target.value})}
-              className="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-sm"
-              disabled={state !== 'disconnected'}
-            >
-              {wsServers.map(srv => (
-                <option key={srv.url} value={srv.url}>
-                  {srv.name} - {srv.note}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className={`rounded-lg ${cardBg} p-6 shadow`}>
+          <div className="space-y-3">
+            <div>
+              <label className={labelClass}>Servidor WebSocket</label>
+              <select
+                value={config.url}
+                onChange={(e) => setConfig({...config, url: e.target.value})}
+                className={inputClass}
+                disabled={state !== 'disconnected'}>
+                {wsServers.map(srv => (
+                  <option key={srv.url} value={srv.url}>{srv.name} - {srv.note}</option>
+                ))}
+              </select>
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              type="text"
-              placeholder="Nick"
-              value={config.nick}
-              onChange={(e) => setConfig({...config, nick: e.target.value})}
-              className="px-3 py-2 bg-gray-700 rounded border border-gray-600 text-sm"
-              disabled={state !== 'disconnected'}
-            />
-            <input
-              type="text"
-              placeholder="Nome Real"
-              value={config.realname}
-              onChange={(e) => setConfig({...config, realname: e.target.value})}
-              className="px-3 py-2 bg-gray-700 rounded border border-gray-600 text-sm"
-              disabled={state !== 'disconnected'}
-            />
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Nick</label>
+                <input
+                  type="text"
+                  value={config.nick}
+                  onChange={e => setConfig({...config, nick: e.target.value})}
+                  className={inputClass}
+                  disabled={state !== 'disconnected'}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Nome Real</label>
+                <input
+                  type="text"
+                  value={config.realname}
+                  onChange={e => setConfig({...config, realname: e.target.value})}
+                  className={inputClass}
+                  disabled={state !== 'disconnected'}
+                />
+              </div>
+            </div>
 
-          <div className="flex gap-2">
-            <button
-              onClick={handleConnect}
-              disabled={state !== 'disconnected'}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-500 rounded text-sm font-medium"
-            >
-              <Power size={16} />
-              Conectar
-            </button>
-            <button
-              onClick={handleDisconnect}
-              disabled={state === 'disconnected'}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:text-gray-500 rounded text-sm font-medium"
-            >
-              Desconectar
-            </button>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <button onClick={handleConnect} disabled={state !== 'disconnected'} className={buttonPrimary}>
+                <Power size={17} />
+                Conectar
+              </button>
+              <button onClick={handleDisconnect} disabled={state === 'disconnected'} className={buttonDanger}>
+                Desconectar
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Quick Commands */}
         {state === 'connected' && (
-          <div className="bg-gray-800 rounded-lg p-4 border-2 border-green-500">
-            <div className="flex items-center gap-2 mb-3">
+          <div className={`${cardBg} rounded-lg p-6 border-2 border-green-500 shadow-sm`}>
+            <div className="flex items-center gap-2 mb-4">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <h3 className="text-sm font-semibold text-green-400">🟢 Conectado - Comandos Disponíveis</h3>
+              <h3 className="text-base font-semibold text-green-600 dark:text-green-400">🟢 Conectado - Comandos rápidos</h3>
             </div>
-            <div className="flex gap-2 flex-wrap mb-3">
-              <button
-                onClick={() => handleCommand('JOIN #Chat')}
-                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
-              >
-                JOIN #Chat
-              </button>
-              <button
-                onClick={() => handleCommand('JOIN #Unreal-Support')}
-                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
-              >
-                JOIN #Unreal-Support
-              </button>
+            <div className="flex gap-2 flex-wrap mb-4">
+              <button onClick={() => handleCommand('JOIN #Chat')} className={buttonSecondary}>JOIN #Chat</button>
+              <button onClick={() => handleCommand('JOIN #Unreal-Support')} className={buttonSecondary}>JOIN #Unreal-Support</button>
               <button
                 onClick={() => {
                   const ch = prompt('Canal:');
                   if (ch) handleCommand(`NAMES ${ch}`);
                 }}
-                className="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs"
-              >
+                className={`${buttonPrimary} bg-purple-600 hover:bg-purple-700`}>
                 List Users
               </button>
               <button
@@ -450,68 +462,56 @@ export default function IRCEngineDemo() {
                     addLog('message', `[${target}] <${config.nick}> ${msg}`);
                   }
                 }}
-                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-xs"
+                className={buttonPrimary}
               >
                 Send Message
               </button>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-1">
               <input
                 type="text"
                 value={commandInput}
-                onChange={(e) => setCommandInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendCommand()}
+                onChange={e => setCommandInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSendCommand()}
                 placeholder="Raw IRC command (ex: PRIVMSG #Chat :Hello!)"
-                className="flex-1 px-3 py-2 bg-gray-700 rounded border border-gray-600 text-sm"
+                className={inputClass}
               />
-              <button
-                onClick={handleSendCommand}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm"
-              >
-                <Send size={16} />
-              </button>
+              <button onClick={handleSendCommand} className={buttonPrimary}><Send size={18}/></button>
             </div>
           </div>
         )}
 
+        <div className={`${divider}`}></div>
+
         {/* Console */}
-        <div className="bg-gray-800 rounded-lg p-4">
-          <h3 className="text-sm font-semibold mb-3 text-gray-400">Console (últimas 50 mensagens)</h3>
-          <div className="bg-black rounded p-3 h-96 overflow-y-auto font-mono text-xs space-y-1">
+        <div className={`rounded-lg ${cardBg} p-0 shadow`}>
+          <h3 className={`${subheading} px-6 pt-6`}>Console IRC (últimas 50 mensagens)</h3>
+          <div className="pb-6 grid gap-1">
             {logs.length === 0 && (
-              <div className="text-gray-600 italic">Aguardando conexão...</div>
+              <div className="text-gray-400 italic px-6 py-4">Aguardando conexão...</div>
             )}
             {logs.map((log, i) => (
-              <div key={i} className="flex gap-3">
-                <span className="text-gray-500 shrink-0">{log.time}</span>
-                <span className={
-                  log.type === 'error' ? 'text-red-400' :
-                  log.type === 'success' ? 'text-green-400' :
-                  log.type === 'ping' ? 'text-yellow-400' :
-                  log.type === 'message' ? 'text-cyan-400' :
-                  log.type === 'join' ? 'text-green-300' :
-                  log.type === 'part' ? 'text-orange-400' :
-                  log.type === 'names' ? 'text-purple-400' :
-                  log.type === 'sent' ? 'text-blue-300' :
-                  log.type === 'state' ? 'text-blue-400' :
-                  log.type === 'debug' ? 'text-purple-400' :
-                  'text-gray-400'
-                }>
-                  {log.data}
-                </span>
+              <div
+                key={i}
+                className={`mx-6 mt-1 rounded p-2 font-mono text-xs shadow-sm ${consoleTypes[log.type] || consoleTypes.default} flex gap-3 items-baseline`}
+              >
+                <span className="opacity-70 w-16 shrink-0">{log.time}</span>
+                <span className="whitespace-pre-wrap">{log.data}</span>
               </div>
             ))}
           </div>
         </div>
 
+        <div className={`${divider}`}></div>
+
         {/* Instruções */}
-        <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg p-6">
           <div className="flex gap-3">
-            <AlertCircle className="text-blue-400 shrink-0" size={20} />
-            <div className="text-sm space-y-2">
-              <p className="font-semibold text-blue-300">Como testar:</p>
-              <ol className="list-decimal list-inside space-y-1 text-gray-300">
+            <AlertCircle className="text-blue-400 shrink-0" size={22} />
+            <div className={`${subheading} space-y-2`}>
+              <p className="font-semibold text-blue-600 dark:text-blue-300">Como testar:</p>
+              <ol className="list-decimal list-inside space-y-1 text-gray-700 dark:text-gray-200">
                 <li>Servidor padrão (Ergo Testnet) já está selecionado</li>
                 <li>Clique em "Conectar"</li>
                 <li>Aguarde o estado mudar para "connected" (~2-3 segundos)</li>
@@ -519,13 +519,12 @@ export default function IRCEngineDemo() {
                 <li>Observe mensagens raw no console</li>
                 <li>PING será respondido automaticamente (amarelo no log)</li>
               </ol>
-              <p className="text-yellow-300 mt-2 text-xs">
+              <p className="text-yellow-700 dark:text-yellow-300 mt-2 text-xs">
                 ⚠️ Se Libera.Chat não funcionar, é porque ele não aceita WebSocket direto sem WEBIRC.
               </p>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
