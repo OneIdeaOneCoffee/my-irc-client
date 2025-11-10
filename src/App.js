@@ -3,9 +3,9 @@ import "./App.css";
 
 // Ícones simplificados
 const Radio = ({ className = "", size = 20 }) => <span className={`radio-icon ${className}`} style={{ width: size, height: size }} />;
-const Power = ({ size = 16 }) => <span style={{ fontWeight: "bold", fontSize: size }}>⏻</span>;
-const Send = ({ size = 16 }) => <span style={{ fontWeight: "bold", fontSize: size }}>✉️</span>;
-const User = ({ size = 16 }) => <span style={{ fontWeight: "bold", fontSize: size }}>👤</span>;
+const Power = ({ size = 16 }) => <span style={{fontWeight:"bold",fontSize:size}}>⏻</span>;
+const Send = ({ size = 16 }) => <span style={{fontWeight:"bold",fontSize:size}}>✉️</span>;
+const User = ({ size = 16 }) => <span style={{fontWeight:"bold",fontSize:size}}>👤</span>;
 
 class BufferManager {
   constructor() { this.buffer = ""; }
@@ -132,29 +132,11 @@ export default function IRCEngineDemo() {
   ];
   const clientRef = useRef(null);
 
-  // Logs de mensagens do canal para janela de chat
-  const [chatMessages, setChatMessages] = useState([]);
-
-  // Adiciona log em ambas (console sempre, chat somente mensagens)
   const addLog = (type, data, channel = currentChannel) => {
-    // Console IRC: sempre adiciona
     setLogs((prev) => [
       ...prev,
       { time: new Date().toLocaleTimeString(), type, data, channel }
     ].slice(-300));
-
-    // Chat: só mensagens/envolvimento no canal atual
-    if (channel === currentChannel && (
-      type === "message" ||
-      type === "join" ||
-      type === "part" ||
-      type === "names"
-    )) {
-      setChatMessages((prev) => [
-        ...prev,
-        { time: new Date().toLocaleTimeString(), type, data, channel }
-      ].slice(-300));
-    }
   };
 
   const handleConnect = () => {
@@ -201,14 +183,17 @@ export default function IRCEngineDemo() {
       const ch = cmd.split(" ")[1];
       setCurrentChannel(ch);
       setChannelUsers([]);
-      setChatMessages([]);
     }
     if (/^PART\s+[#\w]+/i.test(cmd)) {
       setChannelUsers([]);
-      setChatMessages([]);
     }
   };
   const handleSendCommand = () => { if (commandInput.trim()) { handleCommand(commandInput); setCommandInput(""); } };
+
+  // Só chat do canal
+  const chatLogs = logs.filter(l => l.channel === currentChannel && (l.type === "message" || l.type === "join" || l.type === "part" || l.type === "names"));
+  // Console: mostra tudo
+  const consoleLogs = logs;
 
   return (
     <div className="app-root">
@@ -266,10 +251,10 @@ export default function IRCEngineDemo() {
                 </div>
                 {/* Chat */}
                 <div className="chat-messages">
-                  <h4 className="chat-title">Chat: <span style={{ color: "#54a0ff" }}>{currentChannel}</span></h4>
+                  <h4 className="chat-title">Chat: <span style={{color:"#54a0ff"}}>{currentChannel}</span></h4>
                   <div className="console-list chat-console">
-                    {chatMessages.length === 0 && <div className="console-msg console-msg-default">Sem mensagens ainda.</div>}
-                    {chatMessages.map((log, i) => (
+                    {chatLogs.length === 0 && <div className="console-msg console-msg-default">Sem mensagens ainda.</div>}
+                    {chatLogs.map((log, i) => (
                       <div key={i} className={`console-msg console-msg-${log.type}`}>
                         <span className="console-time">{log.time}</span>
                         <span className="console-text">{log.data}</span>
@@ -295,28 +280,25 @@ export default function IRCEngineDemo() {
                 </div>
               </div>
             </div>
-            {/* Console IRC apenas de eventos, abaixo */}
+            {/* Console IRC SEPARADO ABAIXO */}
             <div className="irc-console-block">
               <div className="card console-card">
                 <h3 className="console-heading">Console IRC (todos eventos)</h3>
                 <div className="console-list irc-console-list">
-                  {logs.length === 0 && (
+                  {consoleLogs.length === 0 && (
                     <div className="console-msg console-msg-default italic">
                       Aguardando conexão...
                     </div>
                   )}
-                  {logs.map((log, i) => (
-                    // Exclui tipos do chat canal; mostra apenas IRC (eventos, debug, etc.)
-                    { // Mensagens do chat já aparecem acima!
-                      if (["message", "join", "part", "names"].includes(log.type) && log.channel === currentChannel) return null;
-                      return (
-                        <div key={i} className={`console-msg console-msg-${log.type}`}>
-                          <span className="console-time">{log.time}</span>
-                          <span className="console-text">{log.data}</span>
-                        </div>
-                      );
-                    }
-                  )}
+                  {consoleLogs.map((log, i) => (
+                    <div
+                      key={i}
+                      className={`console-msg console-msg-${log.type}`}
+                    >
+                      <span className="console-time">{log.time}</span>
+                      <span className="console-text">{log.data}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -327,7 +309,7 @@ export default function IRCEngineDemo() {
         {/* Instruções */}
         <div className="card info-card">
           <div className="row">
-            <span style={{ fontWeight: "bold", fontSize: "1.4em", color: "#4091e1" }}>🛈</span>
+            <span style={{fontWeight:"bold",fontSize:"1.4em",color:"#4091e1"}}>🛈</span>
             <div>
               <p className="info-title">Como testar:</p>
               <ol className="info-list">
