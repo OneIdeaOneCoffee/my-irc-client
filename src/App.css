@@ -1,3 +1,6 @@
+/* =======================================================================
+   BASE
+======================================================================= */
 .app-root {
   min-height: 100vh;
   background: #181a20;
@@ -19,31 +22,29 @@
   margin-bottom: 4px;
   box-shadow: 0 6px 24px 0 #0002;
 }
+
+/* =======================================================================
+   CABEÇALHO
+======================================================================= */
 .header-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 .heading { font-size: 1.7rem; font-weight: bold; margin-bottom: 4px; }
-.subtitle {
-  color: #a2a6bd;
-  font-size: 1rem;
-  margin-top: 1px;
-}
+.subtitle { color: #a2a6bd; font-size: 1rem; margin-top: 1px; }
 .header-state { display: flex; align-items: center; gap: 12px; }
 .state-label { font-family: monospace; font-size: 1.2rem; font-weight: bold; }
-/* State colors: st-gray, st-blue, st-green, st-yellow */
+
+/* Estado visual */
 .st-gray { background: radial-gradient(circle, #666 60%, #333 100%) !important;}
 .st-green { background: radial-gradient(circle, #2ecc71 60%, #1a8053 100%) !important;}
 .st-blue { background: radial-gradient(circle, #3498db 60%, #214979 100%) !important;}
 .st-yellow { background: radial-gradient(circle, #f9ca24 60%, #b27f25 100%) !important;}
 
-.divider {
-  border: none;
-  border-bottom: 1px solid #353849;
-  margin: 24px 0;
-}
-
+/* =======================================================================
+   FORM E BOTÕES
+======================================================================= */
 .label {
   font-size: 0.98rem;
   font-weight: 600;
@@ -62,19 +63,15 @@
   transition: border 0.2s;
 }
 .input:focus { border: 1.5px solid #3498db; outline: none;}
-
 select.input { margin-bottom: 14px; }
 
-/* Responsive row/col  */
 .row { display: flex; gap: 16px; }
-.row.gap { gap: 10px; margin-top: 9px; }
 .col { flex: 1; min-width: 180px; display: flex; flex-direction: column; }
 @media (max-width: 600px) {
   .row { flex-direction: column; }
   .col { min-width: 120px; }
 }
 
-/* Button styles */
 .button {
   background: #3498db;
   color: #fff;
@@ -85,38 +82,32 @@ select.input { margin-bottom: 14px; }
   font-size: 0.92rem;
   cursor: pointer;
   transition: background 0.2s, scale 0.1s;
-  margin-bottom: 1px;
-  margin-right: 2px;
   display: flex;
   align-items: center;
 }
 .button:active { scale: 0.97;}
 .button:disabled { background: #555 !important; color: #aaa; cursor: not-allowed; }
 .button.alt { background: #23262F; color: #3498db; border: 1px solid #3498db;}
-.button.connect { background: #00b894; color: #fff; }
-.button.disconnect { background: #e74c3c; color: #fff; }
-.button.purple { background: #764eb2; color: #fff; }
+.button.connect { background: #00b894; }
+.button.disconnect { background: #e74c3c; }
+.button.purple { background: #764eb2; }
 
-/* Connected block */
+/* =======================================================================
+   CONEXÃO
+======================================================================= */
 .connected { border: 2px solid #32c85c;}
-.connected-status { align-items: center; gap: 9px; margin-bottom: 12px;}
-.connected-label { color: #00b894; font-weight: bold; font-size: 1.13rem;}
 .dot {
   width: 11px; height: 11px; background: #00b894;
   border-radius: 99px;
   animation: pulse 2s infinite;
   box-shadow: 0 0 9px #00b894;
 }
-@keyframes pulse {
-  0% { opacity: 1;}
-  50% { opacity: 0.65;}
-  100% {opacity: 1;}
-}
+@keyframes pulse { 0%,100% {opacity:1;} 50% {opacity:.65;} }
 
-/* Console */
-.console-card {
-  padding-bottom: 0;
-}
+/* =======================================================================
+   CONSOLE
+======================================================================= */
+.console-card { padding-bottom: 0; }
 .console-heading {
   color: #a2a6bd;
   font-weight: bold;
@@ -128,7 +119,7 @@ select.input { margin-bottom: 14px; }
   max-height: 385px;
   overflow-y: auto;
   padding: 4px 0 18px 0;
-  font-family: "Fira Mono", "Consolas", "Courier New", monospace;
+  font-family: "Fira Mono", Consolas, monospace;
   font-size: 0.98rem;
 }
 .console-msg {
@@ -136,122 +127,53 @@ select.input { margin-bottom: 14px; }
   gap: 14px;
   align-items: flex-start;
   background: #191d25;
-  color: #f1f2f6;
-  border-radius: 7px;
   border-left: 4px solid #343746;
   padding: 5px 9px;
   margin: 3px 11px;
-  font-size: 0.99rem;
+  border-radius: 7px;
 }
-.console-msg-error { border-color: #c0392b; background: #362225; color: #e17055;}
-.console-msg-success { border-color: #00b894; background: #193423; color: #00b894;}
-.console-msg-ping { border-color: #f9ca24; background: #373413; color: #f9ca24;}
-.console-msg-message { border-color: #54a0ff; background: #19252d; color: #54a0ff;}
-.console-msg-join { border-color: #00b894; background: #232d22; color: #00b894;}
-.console-msg-part { border-color: #fd9644; background: #473a22; color: #fd9644;}
-.console-msg-names { border-color: #a959f2; background: #251d31; color: #a959f2;}
-.console-msg-sent { border-color: #3498db; background: #191d25; color: #3498db;}
-.console-msg-state { border-color: #2962FF; background: #232d34; color: #54a0ff;}
-.console-msg-debug { border-color: #5f27cd; background: #23234d; color: #5f27cd;}
-.console-msg-raw { border-color: #636e72; background: #2d2d2d; color: #b2bec3;}
-.console-msg-default { border-color: #636e72; background: #23262F; color: #dfe6e9;}
 .console-time {
   min-width: 65px;
   color: #868cad;
   opacity: 0.65;
   font-family: monospace;
 }
-.console-text { white-space: pre-wrap;}
+.console-text { white-space: pre-wrap; }
 
-.info-card {
-  background: #223458;
-  color: #d3ebff;
-  border: 1.5px solid #4091e1;
-  margin-bottom: 32px;
-}
-.info-title {
-  font-weight: bold;
-  font-size: 1.1rem;
-  color: #4091e1;
-  margin-bottom: 7px;
-}
-.info-list { margin-left: 9px; margin-bottom: 0; }
-.info-list li { font-size: 0.98rem; margin-bottom: 2px; color: #b8cdf1; }
-.warn {
-  color: #f9ca24;
-  margin-top: 10px;
-  margin-bottom: 3px;
-  font-size: 0.99rem;
-  font-style: italic;
-}
-
-/* Helper */
-.italic { font-style: italic;}
-
-/* ... mantenha seu CSS existente ... */
-
-.chat-area { width: 100%; gap: 18px; display: flex; }
-.users-list {
-  background: #212c3b;
-  border-radius: 16px;
-  min-width: 160px;
-  max-width: 200px;
-  padding: 16px 10px;
-  margin-right: 14px;
-  box-shadow: 0 2px 8px #0002;
-  display: flex; flex-direction: column;
-}
-.userlist-title { font-weight: bold; font-size: 1.1em; margin-bottom: 12px;}
-.userlist-list { display: flex; flex-direction: column; gap: 7px; }
-.userlist-item { font-weight: 600; color: #54a0ff; background: #1c2030; padding: 3px 9px; border-radius: 8px;}
-.userlist-empty { font-style: italic; color: #888;}
-.chat-messages { flex: 1; display: flex; flex-direction: column;}
-.chat-title { color: #77c2ff; font-size: 1.09em; font-weight: bold; margin-bottom: 7px;}
-.chat-console { min-height: 200px; max-height: 260px; overflow-y: auto; margin-bottom: 12px;}
-.cmd-btns-area { margin-top: 6px;}
-.cmd-btns-row { display: flex; flex-wrap: wrap; gap: 7px; }
-
-@media (max-width: 700px) {
-  .chat-area { flex-direction: column; }
-  .users-list { margin-right: 0; min-width: 100%; }
-}
-
-/* Acrescente ao fim do seu App.css */
-
+/* =======================================================================
+   CHAT
+======================================================================= */
 .main-irc-row {
   display: flex;
   gap: 22px;
   width: 100%;
   align-items: flex-start;
 }
+.chat-users-block { flex: 2; min-width: 0; }
+.irc-console-block { flex: 1.1; min-width: 0; margin-top: 36px; }
 
-.chat-users-block {
-  flex: 2;
-  min-width: 0;
+.chat-area { width: 100%; display: flex; gap: 18px; }
+.users-list {
+  background: #212c3b;
+  border-radius: 16px;
+  min-width: 160px;
+  max-width: 200px;
+  padding: 16px 10px;
+  box-shadow: 0 2px 8px #0002;
+  display: flex; flex-direction: column;
 }
+.userlist-title { font-weight: bold; margin-bottom: 12px; }
+.userlist-item { font-weight: 600; color: #54a0ff; background: #1c2030; padding: 3px 9px; border-radius: 8px; }
 
-.irc-console-block {
-  flex: 1.1;
-  min-width: 0;
-}
+.chat-messages { flex: 1; display: flex; flex-direction: column;}
+.chat-title { color: #77c2ff; font-weight: bold; margin-bottom: 7px;}
+.chat-console { min-height: 200px; max-height: 260px; overflow-y: auto; margin-bottom: 12px; }
 
-.irc-console-list {
-  max-height: 420px;
-  min-height: 240px;
-  overflow-y: auto;
-  font-size: .97rem;
-}
-
-/* responsividade */
 @media (max-width: 1150px) {
-  .main-irc-row { flex-direction: column;}
+  .main-irc-row { flex-direction: column; }
   .irc-console-block { margin-top: 18px; }
 }
-
-.irc-console-block {
-  margin-top: 36px;
-}
-
-.irc-console-block {
-  margin-top: 36px;
+@media (max-width: 700px) {
+  .chat-area { flex-direction: column; }
+  .users-list { margin-right: 0; min-width: 100%; }
 }
