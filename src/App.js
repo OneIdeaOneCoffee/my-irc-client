@@ -193,10 +193,10 @@ export default function IRCEngineDemo() {
   const addLog = (type, data, channel = currentChannel) => {
     const newLog = { time: new Date().toLocaleTimeString(), type, data, channel };
     
-    // Console IRC: sempre adiciona
+    // Console IRC: SEMPRE adiciona todos os logs
     setLogs((prev) => [...prev, newLog].slice(-300));
 
-    // Chat: só mensagens/envolvimento no canal atual
+    // Chat: APENAS mensagens do canal atual
     if (channel === currentChannel && (
       type === "message" ||
       type === "join" ||
@@ -274,6 +274,7 @@ export default function IRCEngineDemo() {
       setCurrentChannel(ch);
       setChannelUsers([]);
       setChatMessages([]);
+      addLog("info", `Canal alterado para: ${ch}`);
     }
     
     if (/^PART\s+[#\w]+/i.test(cmd)) {
@@ -284,14 +285,25 @@ export default function IRCEngineDemo() {
 
   const handleSendCommand = () => { 
     if (commandInput.trim()) { 
-      handleCommand(commandInput); 
+      // Se começar com /, é comando IRC, senão é mensagem para o canal
+      if (commandInput.startsWith("/")) {
+        handleCommand(commandInput.slice(1));
+      } else {
+        // Mensagem normal para o canal atual
+        if (currentChannel) {
+          clientRef.current.privmsg(currentChannel, commandInput);
+          addLog("message", `[${currentChannel}] <${config.nick}> ${commandInput}`, currentChannel);
+        }
+      }
       setCommandInput(""); 
     } 
   };
 
-  // Filter function for console logs
+  // Filter function for console logs - EXCLUI apenas mensagens do chat do canal atual
   const shouldShowInConsole = (log) => {
-    return !(["message", "join", "part", "names"].includes(log.type) && log.channel === currentChannel);
+    // Mostra TUDO no console, exceto mensagens do chat do canal atual
+    return !(log.channel === currentChannel && 
+           ["message", "join", "part", "names"].includes(log.type));
   };
 
   return (
@@ -353,11 +365,15 @@ export default function IRCEngineDemo() {
                   </div>
                 </div>
                 
-                {/* Chat */}
+                {/* Chat Principal */}
                 <div className="chat-messages">
                   <h4 className="chat-title">Chat: <span style={{ color: "#54a0ff" }}>{currentChannel}</span></h4>
                   <div className="console-list chat-console">
-                    {chatMessages.length === 0 && <div className="console-msg console-msg-default">Sem mensagens ainda.</div>}
+                    {chatMessages.length === 0 && (
+                      <div className="console-msg console-msg-default">
+                        Nenhuma mensagem ainda. Use "JOIN #canal" para entrar em um canal.
+                      </div>
+                    )}
                     {chatMessages.map((log, i) => (
                       <div key={i} className={`console-msg console-msg-${log.type}`}>
                         <span className="console-time">{log.time}</span>
@@ -372,7 +388,7 @@ export default function IRCEngineDemo() {
                       onChange={e => setCommandInput(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && handleSendCommand()}
                       className="input" 
-                      placeholder={`Digite para enviar ao canal (${currentChannel})`} 
+                      placeholder={`Mensagem para ${currentChannel} (ou /comando)`} 
                     />
                     <button className="button connect" onClick={handleSendCommand}>
                       <Send />
@@ -393,7 +409,7 @@ export default function IRCEngineDemo() {
               </div>
             </div>
             
-            {/* Console IRC apenas de eventos, abaixo */}
+            {/* Console IRC - TODOS os eventos (exceto mensagens do chat) */}
             <div className="irc-console-block">
               <div className="card console-card">
                 <h3 className="console-heading">Console IRC (todos eventos)</h3>
