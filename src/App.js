@@ -282,26 +282,30 @@ export default function ConsultoriaIRC() {
     setShowUsers(false);
   };
 
-  const handleAction = (action) => {
-    switch (action) {
-      case "clear":
-        setChatMessages([]);
-        break;
-      case "users":
-        setShowUsers(!showUsers);
-        if (clientRef.current && !showUsers) {
-          clientRef.current.names(CONSULTANCY_CHANNEL);
-        }
-        break;
-      case "help":
-        addToChat("info", "Digite sua mensagem e clique em ↑ para enviar. Use os botões para limpar ou ver usuários.", true);
-        break;
-      case "leave":
-        handleDisconnect();
-        break;
-    }
-  };
-
+const handleAction = (action) => {
+  switch (action) {
+    case "clear":
+      setChatMessages([]);
+      break;
+    case "users":
+      setShowUsers(!showUsers);
+      if (clientRef.current && !showUsers) {
+        clientRef.current.names(CONSULTANCY_CHANNEL);
+      }
+      break;
+    case "help":
+      addToChat("info", "Digite sua mensagem e clique em ↑ para enviar. Use os botões para limpar ou ver usuários.", true);
+      break;
+    case "leave":
+      handleDisconnect();
+      break;
+    default:
+      // Caso padrão para evitar erro do ESLint
+      console.log("Ação não reconhecida:", action);
+      break;
+  }
+};
+  
   const handleSendMessage = () => { 
     const text = commandInput.trim();
     if (!text) return;
