@@ -2,12 +2,13 @@ import React, { useState, useRef, useEffect } from "react";
 import "./App.css";
 
 // Ícones simplificados
-const Radio = ({ className = "", size = 20 }) => <span className={`radio-icon ${className}`} style={{ width: size, height: size }} />;
 const Power = ({ size = 24 }) => <span style={{ fontWeight: "bold", fontSize: size }}>⏻</span>;
 const Send = ({ size = 20 }) => <span style={{ fontWeight: "bold", fontSize: size }}>↑</span>;
 const User = ({ size = 20 }) => <span style={{ fontWeight: "bold", fontSize: size }}>👤</span>;
-const ChevronDown = ({ size = 16 }) => <span style={{ fontSize: size }}>▾</span>;
-const ChevronUp = ({ size = 16 }) => <span style={{ fontSize: size }}>▴</span>;
+
+// Configuração fixa para consultoria
+const CONSULTANCY_CHANNEL = "#consultoria-privada";
+const CONSULTANCY_SERVER = "wss://irc.ergo.chat:6697";
 
 class BufferManager {
   constructor() { this.buffer = ""; }
@@ -74,7 +75,7 @@ class IRCClient {
     if (this.listeners.has(event)) { this.listeners.get(event).forEach((cb) => cb(data)); }
   }
   
-  connect(url, nick, user, realname, password = null) {
+  connect(url, nick, user, realname) {
     this.connectionState = "connecting";
     this.emit("state", { state: "connecting" });
     this.ws = new window.WebSocket(url);
@@ -82,11 +83,8 @@ class IRCClient {
     this.ws.addEventListener("open", () => {
       this.connectionState = "registering";
       this.emit("state", { state: "registering" });
-      this.emit("debug", { msg: "WebSocket aberto, iniciando handshake IRC" });
-      if (password) this.send(`PASS ${password}`);
       this.send(`NICK ${nick}`);
       this.send(`USER ${user} 0 * :${realname}`);
-      
       this.startHeartbeat();
     });
     
@@ -97,11 +95,9 @@ class IRCClient {
         if (!line.trim()) return;
         
         const msg = IRCParser.parse(line);
-        this.emit("raw", msg);
         
         if (msg.command === "PING") { 
           this.send(`PONG ${msg.trailing || msg.params[0]}`); 
-          this.emit("ping", msg); 
           return; 
         }
         
@@ -146,12 +142,7 @@ class IRCClient {
     });
     
     this.ws.addEventListener("error", (err) => {
-      this.emit("error", { 
-        type: err.type, 
-        timestamp: Date.now(), 
-        readyState: this.ws.readyState, 
-        url: url 
-      });
+      this.emit("error", { type: err.type });
     });
   }
   
@@ -186,46 +177,25 @@ class IRCClient {
   }
   
   join(channel) { this.send(`JOIN ${channel}`); }
-  part(channel, reason = "") { this.send(`PART ${channel}${reason ? " :" + reason : ""}`); }
+  part(channel) { this.send(`PART ${channel}`); }
   privmsg(target, text) { this.send(`PRIVMSG ${target} :${text}`); }
-  quit(reason = "Saindo") { this.send(`QUIT :${reason}`); setTimeout(() => this.disconnect(), 500); }
-  names(channel) { this.send(`NAMES ${channel}`); }
+  quit() { this.send(`QUIT :Saindo da consultoria`); setTimeout(() => this.disconnect(), 500); }
 }
 
-const QUICK_COMMANDS = [
-  { cmd: "JOIN #test", label: "#test", icon: "💬" },
-  { cmd: "JOIN #chat", label: "#chat", icon: "👥" },
-  { cmd: "JOIN #help", label: "#help", icon: "❓" },
-  { cmd: "LIST", label: "Canais", icon: "📋" }
+const ACTION_BUTTONS = [
+  { action: "clear", label: "Limpar", icon: "🗑️" },
+  { action: "users", label: "Usuários", icon: "👥" },
+  { action: "help", label: "Ajuda", icon: "❓" },
+  { action: "leave", label: "Sair", icon: "🚪" }
 ];
 
-const ACTION_COMMANDS = [
-  { cmd: "NAMES", label: "Usuários", icon: "👤" },
-  { cmd: "WHO", label: "Online", icon: "🟢" },
-  { cmd: "TOPIC", label: "Tópico", icon: "📝" },
-  { cmd: "LEAVE", label: "Sair", icon: "🚪" }
-];
-
-export default function IRCEngineDemo() {
-  const [logs, setLogs] = useState([]);
+export default function ConsultoriaIRC() {
   const [state, setState] = useState("disconnected");
-  const [config, setConfig] = useState({
-    url: "wss://irc.ergo.chat:6697",
-    nick: "User" + Math.floor(Math.random() * 9999),
-    user: "user",
-    realname: "IRC User"
-  });
   const [commandInput, setCommandInput] = useState("");
   const [channelUsers, setChannelUsers] = useState([]);
-  const [currentChannel, setCurrentChannel] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
   const [showUsers, setShowUsers] = useState(false);
-  const [showConsole, setShowConsole] = useState(false);
-  
-  const wsServers = [
-    { name: "Ergo Chat", url: "wss://irc.ergo.chat:6697", note: "Recomendado" },
-    { name: "UnrealIRCd", url: "wss://irc.unrealircd.org:443", note: "Demo" }
-  ];
+  const [nick] = useState(() => `Cliente${Math.floor(Math.random() * 9999)}`);
   
   const clientRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -238,10 +208,10 @@ export default function IRCEngineDemo() {
 
   // Focar no input quando conectar
   useEffect(() => {
-    if (state === "connected" && currentChannel) {
+    if (state === "connected") {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
-  }, [state, currentChannel]);
+  }, [state]);
 
   const addToChat = (type, data, userAction = false) => {
     const newLog = { 
@@ -250,12 +220,7 @@ export default function IRCEngineDemo() {
       data,
       userAction
     };
-    setChatMessages((prev) => [...prev, newLog].slice(-100));
-  };
-
-  const addToConsole = (type, data) => {
-    const newLog = { time: new Date().toLocaleTimeString(), type, data };
-    setLogs((prev) => [...prev, newLog].slice(-50));
+    setChatMessages((prev) => [...prev, newLog].slice(-200));
   };
 
   const handleConnect = () => {
@@ -264,33 +229,24 @@ export default function IRCEngineDemo() {
     
     client.on("state", (data) => { 
       setState(data.state); 
-      addToConsole("state", `Estado: ${data.state}`); 
     });
-    
-    client.on("debug", (data) => addToConsole("debug", data.msg));
     
     client.on("registered", () => {
-      addToConsole("success", "Conectado ao servidor");
-      addToChat("info", "Conectado! Use os botões para entrar em um canal.", true);
+      // Entrar automaticamente no canal de consultoria
+      client.join(CONSULTANCY_CHANNEL);
+      addToChat("info", `Conectado à sala de consultoria ${CONSULTANCY_CHANNEL}`, true);
     });
     
-    client.on("ping", (data) => addToConsole("ping", "Ping recebido"));
-    
     client.on("message", (msg) => {
-      const displayText = msg.isChannel 
-        ? `<${msg.from}> ${msg.text}`
-        : `[PM de ${msg.from}] ${msg.text}`;
-      
-      if (msg.isChannel && msg.to === currentChannel) {
-        addToChat("message", displayText);
-      } else {
-        addToConsole("message", `${msg.to}: ${displayText}`);
+      // APENAS mensagens do canal de consultoria
+      if (msg.to === CONSULTANCY_CHANNEL) {
+        addToChat("message", `<${msg.from}> ${msg.text}`);
       }
     });
     
     client.on("join", (data) => {
-      if (data.channel === currentChannel) {
-        addToChat("join", `→ ${data.nick} entrou`);
+      if (data.channel === CONSULTANCY_CHANNEL) {
+        addToChat("join", `→ ${data.nick} entrou na consultoria`);
         if (!channelUsers.includes(data.nick)) {
           setChannelUsers(prev => [...prev, data.nick].sort());
         }
@@ -298,62 +254,52 @@ export default function IRCEngineDemo() {
     });
     
     client.on("part", (data) => {
-      if (data.channel === currentChannel) {
-        addToChat("part", `← ${data.nick} saiu`);
+      if (data.channel === CONSULTANCY_CHANNEL) {
+        addToChat("part", `← ${data.nick} saiu da consultoria`);
         setChannelUsers(prev => prev.filter(nick => nick !== data.nick));
       }
     });
     
     client.on("names", (data) => {
-      if (data.channel === currentChannel) {
+      if (data.channel === CONSULTANCY_CHANNEL) {
         setChannelUsers(data.users.sort());
-        addToChat("info", `Lista de usuários atualizada: ${data.users.length} online`);
       }
     });
     
-    client.on("raw", (msg) => {
-      if (msg.command !== "PING" && msg.command !== "PONG") {
-        addToConsole("raw", msg.raw);
-      }
+    client.on("error", () => {
+      addToChat("error", "Erro de conexão. Tente novamente.");
     });
     
-    client.on("error", (data) => addToConsole("error", `Erro: ${data.type}`));
-    
-    client.connect(config.url, config.nick, config.user, config.realname);
+    client.connect(CONSULTANCY_SERVER, nick, "consultoria", "Cliente de Consultoria");
   };
 
   const handleDisconnect = () => { 
     if (clientRef.current) {
-      clientRef.current.quit("Saindo...");
+      clientRef.current.quit();
     }
     setChatMessages([]);
     setChannelUsers([]);
-    setCurrentChannel("");
     setShowUsers(false);
-    setShowConsole(false);
   };
 
-  const handleQuickCommand = (cmd) => {
-    if (!clientRef.current || state !== "connected") {
-      addToConsole("error", "Não conectado!");
-      return;
+  const handleAction = (action) => {
+    switch (action) {
+      case "clear":
+        setChatMessages([]);
+        break;
+      case "users":
+        setShowUsers(!showUsers);
+        if (clientRef.current && !showUsers) {
+          clientRef.current.names(CONSULTANCY_CHANNEL);
+        }
+        break;
+      case "help":
+        addToChat("info", "Digite sua mensagem e clique em ↑ para enviar. Use os botões para limpar ou ver usuários.", true);
+        break;
+      case "leave":
+        handleDisconnect();
+        break;
     }
-
-    if (cmd === "LEAVE") {
-      handleDisconnect();
-      return;
-    }
-
-    if (cmd.startsWith("JOIN ")) {
-      const channel = cmd.split(" ")[1];
-      setCurrentChannel(channel);
-      setChannelUsers([]);
-      setChatMessages([]);
-      addToChat("info", `Entrando em ${channel}...`, true);
-    }
-
-    clientRef.current.send(cmd);
-    addToConsole("sent", `→ ${cmd}`);
   };
 
   const handleSendMessage = () => { 
@@ -361,21 +307,12 @@ export default function IRCEngineDemo() {
     if (!text) return;
     
     if (!clientRef.current || state !== "connected") {
-      addToConsole("error", "Não conectado!");
+      addToChat("error", "Não conectado!");
       return;
     }
     
-    if (!currentChannel) {
-      addToConsole("error", "Entre em um canal primeiro!");
-      return;
-    }
-    
-    if (text.startsWith("/")) {
-      handleQuickCommand(text.slice(1));
-    } else {
-      clientRef.current.privmsg(currentChannel, text);
-      addToChat("message", `<${config.nick}> ${text}`, true);
-    }
+    clientRef.current.privmsg(CONSULTANCY_CHANNEL, text);
+    addToChat("message", `<${nick}> ${text}`, true);
     
     setCommandInput("");
     inputRef.current?.focus();
@@ -388,235 +325,137 @@ export default function IRCEngineDemo() {
   };
 
   return (
-    <div className="app-root">
+    <div className="app-root consultoria-app">
       {/* Header Fixo */}
       <div className="header">
         <div className="header-content">
           <div className="header-info">
-            <h1 className="app-title">IRC Mobile</h1>
+            <h1 className="app-title">Consultoria Online</h1>
             <div className="connection-status">
-              <Radio className={state === "connected" ? "st-connected" : state === "connecting" ? "st-connecting" : "st-disconnected"} size={16} />
-              <span className="status-text">{state}</span>
+              <div className={`status-dot ${state === "connected" ? "connected" : state === "connecting" ? "connecting" : "disconnected"}`} />
+              <span className="status-text">
+                {state === "connected" ? "Conectado" : state === "connecting" ? "Conectando..." : "Desconectado"}
+              </span>
             </div>
           </div>
           <div className="header-actions">
-            <button 
-              onClick={handleConnect} 
-              disabled={state !== "disconnected"}
-              className={`connect-btn ${state !== "disconnected" ? "connected" : ""}`}
-            >
-              <Power />
-            </button>
+            {state === "disconnected" ? (
+              <button 
+                onClick={handleConnect}
+                className="connect-btn primary"
+              >
+                <Power /> Conectar
+              </button>
+            ) : (
+              <button 
+                onClick={handleDisconnect}
+                className="connect-btn secondary"
+              >
+                Sair
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       <div className="main-container">
-        {/* Área de Conexão */}
-        {state === "disconnected" && (
-          <div className="connection-card">
-            <div className="form-group">
-              <label className="form-label">Servidor</label>
-              <select 
-                value={config.url} 
-                onChange={e => setConfig({ ...config, url: e.target.value })} 
-                className="form-input"
-              >
-                {wsServers.map(srv => (
-                  <option key={srv.url} value={srv.url}>{srv.name} - {srv.note}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Nickname</label>
-                <input 
-                  type="text" 
-                  value={config.nick} 
-                  onChange={e => setConfig({ ...config, nick: e.target.value })} 
-                  className="form-input"
-                  placeholder="Seu nick"
-                />
-              </div>
-            </div>
-
-            <button 
-              onClick={handleConnect}
-              className="primary-btn large-btn"
-            >
-              <Power size={20} /> Conectar ao IRC
-            </button>
-          </div>
-        )}
-
         {/* Chat Principal */}
-        {state === "connected" && (
-          <div className="chat-container">
-            {/* Cabeçalho do Chat */}
-            <div className="chat-header">
-              <div className="channel-info">
-                <span className="channel-name">
-                  {currentChannel || "Selecione um canal"}
-                </span>
-                {currentChannel && (
-                  <span className="user-count">{channelUsers.length} online</span>
+        <div className="chat-container">
+          {/* Cabeçalho do Chat */}
+          <div className="chat-header">
+            <div className="channel-info">
+              <span className="channel-name">Sala de Consultoria</span>
+              <span className="user-count">{channelUsers.length} participantes</span>
+            </div>
+          </div>
+
+          {/* Lista de Usuários (Acordeão) */}
+          {showUsers && (
+            <div className="users-panel">
+              <div className="panel-header">
+                <User /> Participantes Online
+                <button className="close-panel" onClick={() => setShowUsers(false)}>×</button>
+              </div>
+              <div className="users-grid">
+                {channelUsers.length === 0 ? (
+                  <div className="no-users">Carregando participantes...</div>
+                ) : (
+                  channelUsers.map((user, i) => (
+                    <div key={i} className="user-badge">{user}</div>
+                  ))
                 )}
               </div>
-              <div className="chat-actions">
+            </div>
+          )}
+
+          {/* Área de Mensagens */}
+          <div className="messages-area">
+            {chatMessages.length === 0 ? (
+              <div className="welcome-message">
+                <div className="welcome-icon">💬</div>
+                <h3>Bem-vindo à Consultoria</h3>
+                <p>Conecte-se para iniciar sua sessão de consultoria com nossos especialistas.</p>
                 <button 
-                  className={`icon-btn ${showUsers ? "active" : ""}`}
-                  onClick={() => setShowUsers(!showUsers)}
+                  onClick={handleConnect}
+                  className="primary-btn large-btn"
+                  style={{marginTop: '20px'}}
                 >
-                  <User />
-                </button>
-                <button 
-                  className={`icon-btn ${showConsole ? "active" : ""}`}
-                  onClick={() => setShowConsole(!showConsole)}
-                >
-                  ⚙️
+                  <Power size={20} /> Iniciar Consultoria
                 </button>
               </div>
-            </div>
-
-            {/* Lista de Usuários (Acordeão) */}
-            {showUsers && currentChannel && (
-              <div className="users-panel">
-                <div className="panel-header">
-                  <User /> Usuários em {currentChannel}
-                  <button className="close-panel" onClick={() => setShowUsers(false)}>×</button>
-                </div>
-                <div className="users-grid">
-                  {channelUsers.length === 0 ? (
-                    <div className="no-users">Carregando usuários...</div>
-                  ) : (
-                    channelUsers.map((user, i) => (
-                      <div key={i} className="user-badge">{user}</div>
-                    ))
-                  )}
-                </div>
+            ) : (
+              <div className="messages-list">
+                {chatMessages.map((log, i) => (
+                  <div key={i} className={`message ${log.type} ${log.userAction ? "user-message" : ""}`}>
+                    <span className="message-time">{log.time}</span>
+                    <span className="message-content">{log.data}</span>
+                  </div>
+                ))}
+                <div ref={chatEndRef} />
               </div>
             )}
+          </div>
 
-            {/* Área de Mensagens */}
-            <div className="messages-area">
-              {chatMessages.length === 0 ? (
-                <div className="welcome-message">
-                  <div className="welcome-icon">💬</div>
-                  <h3>Bem-vindo ao IRC Mobile</h3>
-                  <p>Use os botões abaixo para entrar em um canal e começar a conversar!</p>
-                </div>
-              ) : (
-                <div className="messages-list">
-                  {chatMessages.map((log, i) => (
-                    <div key={i} className={`message ${log.type} ${log.userAction ? "user-message" : ""}`}>
-                      <span className="message-time">{log.time}</span>
-                      <span className="message-content">{log.data}</span>
-                    </div>
-                  ))}
-                  <div ref={chatEndRef} />
-                </div>
-              )}
-            </div>
-
-            {/* Botões Rápidos de Canais */}
-            {!currentChannel && (
-              <div className="quick-channels">
-                <h4 className="section-title">Canais Populares</h4>
-                <div className="channels-grid">
-                  {QUICK_COMMANDS.map(({ cmd, label, icon }, i) => (
-                    <button
-                      key={i}
-                      className="channel-btn"
-                      onClick={() => handleQuickCommand(cmd)}
-                    >
-                      <span className="channel-icon">{icon}</span>
-                      <span className="channel-label">{label}</span>
-                    </button>
-                  ))}
-                </div>
+          {/* Área de Input */}
+          {state === "connected" && (
+            <div className="input-area">
+              <div className="input-group">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={commandInput}
+                  onChange={(e) => setCommandInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="message-input"
+                  placeholder="Digite sua mensagem para o consultor..."
+                  maxLength={500}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  className="send-btn"
+                  disabled={!commandInput.trim()}
+                >
+                  <Send />
+                </button>
               </div>
-            )}
 
-            {/* Área de Input */}
-            {currentChannel && (
-              <div className="input-area">
-                <div className="input-group">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={commandInput}
-                    onChange={(e) => setCommandInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    className="message-input"
-                    placeholder={`Mensagem para ${currentChannel} (ou /comando)`}
-                    maxLength={500}
-                  />
+              {/* Botões de Ação */}
+              <div className="quick-actions">
+                {ACTION_BUTTONS.map(({ action, label, icon }) => (
                   <button
-                    onClick={handleSendMessage}
-                    className="send-btn"
-                    disabled={!commandInput.trim()}
+                    key={action}
+                    className="action-btn"
+                    onClick={() => handleAction(action)}
+                    title={label}
                   >
-                    <Send />
+                    <span className="action-icon">{icon}</span>
                   </button>
-                </div>
-
-                {/* Botões de Ação Rápida */}
-                <div className="quick-actions">
-                  {ACTION_COMMANDS.map(({ cmd, label, icon }, i) => (
-                    <button
-                      key={i}
-                      className="action-btn"
-                      onClick={() => handleQuickCommand(cmd + (currentChannel ? ` ${currentChannel}` : ""))}
-                      title={label}
-                    >
-                      <span className="action-icon">{icon}</span>
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
-            )}
-
-            {/* Console (Acordeão) */}
-            {showConsole && (
-              <div className="console-panel">
-                <div className="panel-header">
-                  <span>Console IRC</span>
-                  <button className="close-panel" onClick={() => setShowConsole(false)}>×</button>
-                </div>
-                <div className="console-content">
-                  {logs.length === 0 ? (
-                    <div className="no-logs">Nenhum evento ainda</div>
-                  ) : (
-                    logs.map((log, i) => (
-                      <div key={i} className={`log-entry ${log.type}`}>
-                        <span className="log-time">{log.time}</span>
-                        <span className="log-message">{log.data}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Footer de Status */}
-      {state === "connected" && (
-        <div className="status-footer">
-          <div className="footer-content">
-            <span className="server-info">{new URL(config.url).hostname}</span>
-            <span className="nick-info">{config.nick}</span>
-            <button 
-              onClick={handleDisconnect}
-              className="disconnect-btn"
-            >
-              Sair
-            </button>
-          </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
