@@ -89,12 +89,18 @@ class IRCClient {
     });
     
     this.ws.addEventListener("message", (evt) => {
-      this.lastActivity = Date.now();
-      const lines = this.buffer.push(evt.data);
-      lines.forEach((line) => {
-        if (!line.trim()) return;
-        
-        const msg = IRCParser.parse(line);
+  this.lastActivity = Date.now();
+  let lines = this.buffer.push(evt.data);
+  
+  // Se buffer não retornou linhas, trata como line-mode (UnrealIRCd)
+  if (lines.length === 0 && evt.data.trim()) {
+    lines = [evt.data.trim()];
+    this.buffer.clear(); // Limpa buffer pois não estamos usando modo stream
+  }
+  
+  lines.forEach((line) => {        
+
+const msg = IRCParser.parse(line);
         
         if (msg.command === "PING") { 
           this.send(`PONG ${msg.trailing || msg.params[0]}`); 
