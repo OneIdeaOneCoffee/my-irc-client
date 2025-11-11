@@ -7,7 +7,7 @@ const Send = ({ size = 20 }) => <span style={{ fontWeight: "bold", fontSize: siz
 const User = ({ size = 20 }) => <span style={{ fontWeight: "bold", fontSize: size }}>👤</span>;
 
 // Configuração fixa para consultoria
-const CONSULTANCY_CHANNEL = "#consultoria-privada";
+const CONSULTANCY_CHANNEL = "#test";
 const CONSULTANCY_SERVER = "wss://irc.unrealircd.org:443";
 
 class BufferManager {
