@@ -8,7 +8,7 @@ const User = ({ size = 20 }) => <span style={{ fontWeight: "bold", fontSize: siz
 
 // Configuração fixa para consultoria
 const CONSULTANCY_CHANNEL = "#consultoria-privada";
-const CONSULTANCY_SERVER = "wss://irc.ergo.chat:6697";
+const CONSULTANCY_SERVER = "wss://irc.libera.chat:6697";
 
 class BufferManager {
   constructor() { this.buffer = ""; }
