@@ -224,6 +224,7 @@ export default function ConsultoriaIRC() {
   };
 
   const handleConnect = () => {
+    console.log("🔄 Conectando ao:", CONSULTANCY_SERVER, "Canal:", CONSULTANCY_CHANNEL);
     const client = new IRCClient();
     clientRef.current = client;
     
