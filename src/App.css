@@ -433,6 +433,17 @@
   font-size: 1.2rem;
 }
 
+/* Estados do Radio */
+.radio-icon {
+  display: inline-block;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.st-connected { background: radial-gradient(circle, #10b981 60%, #059669 100%); }
+.st-connecting { background: radial-gradient(circle, #f59e0b 60%, #d97706 100%); }
+.st-disconnected { background: radial-gradient(circle, #ef4444 60%, #dc2626 100%); }
+
 /* Responsividade */
 @media (max-width: 768px) {
   .main-container {
