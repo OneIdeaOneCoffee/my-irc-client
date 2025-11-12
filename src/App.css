@@ -1,511 +1,141 @@
-/* Reset e Base */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+import React, { useState, useRef, useEffect } from "react";
+import "./App.css";
+
+const Power = ({ size = 24 }) => <span style={{ fontWeight: "bold", fontSize: size }}>⏻</span>;
+const Send = ({ size = 20 }) => <span style={{ fontWeight: "bold", fontSize: size }}>↑</span>;
+const User = ({ size = 20 }) => <span style={{ fontWeight: "bold", fontSize: size }}>👤</span>;
+
+function App() {
+  const [connected, setConnected] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [serverUrl, setServerUrl] = useState("");
+  const wsRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const heartbeatRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const connectWebSocket = () => {
+    if (!serverUrl || !nickname) {
+      addLog("error", "Preencha servidor e apelido antes de conectar.");
+      return;
+    }
+
+    try {
+      const ws = new WebSocket(serverUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setConnected(true);
+        addLog("system", `Conectado a ${serverUrl}`);
+        sendMessage(`NICK ${nickname}`);
+        sendMessage(`USER ${nickname} 0 * :${nickname}`);
+        heartbeatRef.current = setInterval(() => sendMessage("PING :heartbeat"), 30000);
+      };
+
+      ws.onmessage = (event) => addLog("server", event.data);
+
+      ws.onerror = (error) => addLog("error", `Erro WebSocket: ${error.message || error}`);
+
+      ws.onclose = () => {
+        setConnected(false);
+        addLog("system", "Desconectado do servidor.");
+        clearInterval(heartbeatRef.current);
+      };
+    } catch (err) {
+      addLog("error", `Falha na conexão: ${err.message}`);
+    }
+  };
+
+  const sendMessage = (msg) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(msg);
+      addLog("client", msg);
+    } else {
+      addLog("error", "Conexão WebSocket não está aberta.");
+    }
+  };
+
+  const handleSendMessage = () => {
+    if (input.trim()) {
+      sendMessage(input);
+      setInput("");
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleSendMessage();
+      e.preventDefault();
+    }
+  };
+
+  const addLog = (type, text) => {
+    setMessages((prev) => [...prev, { type, text }]);
+  };
+
+  const disconnect = () => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      setConnected(false);
+    }
+  };
+
+  return (
+    <div className="consultoria-app">
+      <header className="header">
+        <h1>IRC Web Client</h1>
+        <button onClick={connected ? disconnect : connectWebSocket}>
+          <Power /> {connected ? "Desconectar" : "Conectar"}
+        </button>
+      </header>
+
+      <div className="input-container">
+        <input
+          type="text"
+          placeholder="Servidor (ex: wss://irc-ws.chat)"
+          value={serverUrl}
+          onChange={(e) => setServerUrl(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Apelido"
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+        />
+      </div>
+
+      <div className="chat-container">
+        <div className="messages">
+          {messages.map((m, i) => (
+            <div key={i} className={`message ${m.type}`}>
+              <span>
+                {m.type === "client" && <User />} {m.text}
+              </span>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="input-container">
+          <input
+            type="text"
+            placeholder="Digite sua mensagem..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <button onClick={handleSendMessage}>
+            <Send />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-.consultoria-app {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
-}
-
-/* Header Fixo */
-.header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 16px 20px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 100%;
-}
-
-.app-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #2d3748;
-  margin-bottom: 4px;
-}
-
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.status-dot.connected {
-  background: #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
-}
-
-.status-dot.connecting {
-  background: #f59e0b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
-  animation: pulse 1.5s infinite;
-}
-
-.status-dot.disconnected {
-  background: #ef4444;
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.status-text {
-  font-size: 0.875rem;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.connect-btn {
-  border: none;
-  border-radius: 12px;
-  padding: 10px 16px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.connect-btn.primary {
-  background: #10b981;
-  color: white;
-}
-
-.connect-btn.primary:hover {
-  background: #059669;
-}
-
-.connect-btn.secondary {
-  background: #ef4444;
-  color: white;
-}
-
-.connect-btn.secondary:hover {
-  background: #dc2626;
-}
-
-/* Container Principal */
-.main-container {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-/* Container do Chat */
-.chat-container {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-}
-
-/* Cabeçalho do Chat */
-.chat-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  background: rgba(248, 250, 252, 0.8);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
-}
-
-.channel-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.channel-name {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.user-count {
-  font-size: 0.875rem;
-  color: #64748b;
-  font-weight: 500;
-}
-
-/* Painéis (Acordeão) */
-.users-panel {
-  background: rgba(248, 250, 252, 0.9);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
-  animation: slideDown 0.3s ease-out;
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  font-weight: 600;
-  color: #374151;
-  font-size: 1rem;
-}
-
-.close-panel {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #64748b;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-}
-
-.close-panel:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-/* Lista de Usuários */
-.users-grid {
-  padding: 16px 20px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  max-height: 150px;
-  overflow-y: auto;
-}
-
-.user-badge {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  border-radius: 20px;
-  padding: 8px 16px;
-  font-size: 0.875rem;
-  color: #475569;
-  font-weight: 500;
-  backdrop-filter: blur(10px);
-}
-
-.no-users {
-  color: #64748b;
-  font-style: italic;
-  text-align: center;
-  width: 100%;
-  padding: 20px;
-}
-
-/* Área de Mensagens */
-.messages-area {
-  height: 60vh;
-  min-height: 400px;
-  overflow-y: auto;
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.welcome-message {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 40px 20px;
-  text-align: center;
-  color: #64748b;
-}
-
-.welcome-icon {
-  font-size: 4rem;
-  margin-bottom: 20px;
-  opacity: 0.8;
-}
-
-.welcome-message h3 {
-  color: #374151;
-  margin-bottom: 12px;
-  font-size: 1.5rem;
-}
-
-.welcome-message p {
-  font-size: 1rem;
-  line-height: 1.6;
-  max-width: 400px;
-}
-
-.primary-btn {
-  background: #10b981;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  padding: 16px 24px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.primary-btn:hover {
-  background: #059669;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
-}
-
-.large-btn {
-  padding: 18px 32px;
-  font-size: 1.1rem;
-}
-
-.messages-list {
-  padding: 20px;
-}
-
-.message {
-  display: flex;
-  gap: 12px;
-  padding: 12px 0;
-  border-left: 4px solid transparent;
-  padding-left: 12px;
-  animation: messageAppear 0.3s ease-out;
-}
-
-@keyframes messageAppear {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.message.user-message {
-  border-left-color: #10b981;
-  background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, transparent 100%);
-}
-
-.message-time {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  min-width: 60px;
-  flex-shrink: 0;
-  font-weight: 500;
-}
-
-.message-content {
-  flex: 1;
-  word-wrap: break-word;
-  line-height: 1.4;
-}
-
-.message.info {
-  color: #059669;
-  border-left-color: #10b981;
-  background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, transparent 100%);
-}
-
-.message.join {
-  color: #059669;
-  border-left-color: #10b981;
-  background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, transparent 100%);
-}
-
-.message.part {
-  color: #dc2626;
-  border-left-color: #ef4444;
-  background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%);
-}
-
-.message.error {
-  color: #dc2626;
-  border-left-color: #ef4444;
-  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, transparent 100%);
-}
-
-/* Área de Input */
-.input-area {
-  padding: 20px;
-  border-top: 1px solid rgba(226, 232, 240, 0.6);
-  background: rgba(248, 250, 252, 0.9);
-}
-
-.input-group {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.message-input {
-  flex: 1;
-  padding: 16px 20px;
-  border: 2px solid rgba(226, 232, 240, 0.8);
-  border-radius: 16px;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.9);
-  transition: all 0.2s;
-  backdrop-filter: blur(10px);
-}
-
-.message-input:focus {
-  outline: none;
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-}
-
-.send-btn {
-  background: #10b981;
-  border: none;
-  border-radius: 16px;
-  width: 56px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 1.2rem;
-}
-
-.send-btn:disabled {
-  background: #94a3b8;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.send-btn:not(:disabled):hover {
-  background: #059669;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
-}
-
-.quick-actions {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-}
-
-.action-btn {
-  background: rgba(255, 255, 255, 0.9);
-  border: 2px solid rgba(226, 232, 240, 0.8);
-  border-radius: 12px;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  backdrop-filter: blur(10px);
-}
-
-.action-btn:hover {
-  border-color: #10b981;
-  background: rgba(16, 185, 129, 0.1);
-  transform: translateY(-2px);
-}
-
-.action-icon {
-  font-size: 1.2rem;
-}
-
-/* Estados do Radio */
-.radio-icon {
-  display: inline-block;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-}
-
-.st-connected { background: radial-gradient(circle, #10b981 60%, #059669 100%); }
-.st-connecting { background: radial-gradient(circle, #f59e0b 60%, #d97706 100%); }
-.st-disconnected { background: radial-gradient(circle, #ef4444 60%, #dc2626 100%); }
-
-/* Responsividade */
-@media (max-width: 768px) {
-  .main-container {
-    padding: 16px;
-  }
-  
-  .header {
-    padding: 12px 16px;
-  }
-  
-  .app-title {
-    font-size: 1.1rem;
-  }
-  
-  .chat-header {
-    padding: 16px;
-  }
-  
-  .channel-name {
-    font-size: 1.1rem;
-  }
-  
-  .messages-area {
-    height: 50vh;
-    min-height: 300px;
-  }
-  
-  .messages-list {
-    padding: 16px;
-  }
-  
-  .input-area {
-    padding: 16px;
-  }
-  
-  .message-input {
-    padding: 14px 16px;
-  }
-  
-  .send-btn {
-    width: 52px;
-    height: 52px;
-  }
-  
-  .action-btn {
-    width: 44px;
-    height: 44px;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-content {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .header-actions {
-    align-self: flex-end;
-  }
-  
-  .quick-actions {
-    gap: 12px;
-  }
-}
+export default App;
