@@ -90,71 +90,57 @@ class IRCClient {
   this.send(`USER ${user} 0 * :${realname}`);
   this.startHeartbeat();
 });
-    
-this.ws.addEventListener("message", (evt) => {
+    this.ws.addEventListener("message", (evt) => {
   this.lastActivity = Date.now();
-  
-  // DEBUG: Ver o que o servidor está enviando
-  console.log('📦 FRAME RECEBIDO:', evt.data);
-  console.log('📦 TEM \\r\\n?', evt.data.includes('\r\n'));
-  console.log('📦 TAMANHO:', evt.data.length);
-  
   let lines = this.buffer.push(evt.data);
   
-  // Se buffer não retornou linhas, trata como line-mode (UnrealIRCd)
+  // UnrealIRCd envia frames sem \r\n
   if (lines.length === 0 && evt.data.trim()) {
-    console.log('🔧 Processando como line-mode');
     lines = [evt.data.trim()];
-    this.buffer.clear();
   }
   
   lines.forEach((line) => {
     if (!line.trim()) return;
     
-    console.log('🔍 PROCESSANDO LINHA:', line); // ← NOVO
-    
     const msg = IRCParser.parse(line);
-    console.log('✅ PARSED:', msg); // ← NOVO
     
-const msg = IRCParser.parse(line);
-        
-        if (msg.command === "PING") { 
-          this.send(`PONG ${msg.trailing || msg.params[0]}`); 
-          return; 
-        }
-        
-        if (msg.command === "001") { 
-          this.connectionState = "connected"; 
-          this.emit("state", { state: "connected" }); 
-          this.emit("registered", msg); 
-          return; 
-        }
-        
-        if (msg.command === "PRIVMSG") {
-          const target = msg.params[0];
-          const sender = msg.prefix ? msg.prefix.split("!")[0] : "server";
-          this.emit("message", { 
-            from: sender, 
-            to: target, 
-            text: msg.trailing, 
-            isChannel: target.startsWith("#"), 
-            raw: msg 
-          });
-        } else if (msg.command === "JOIN") {
-          const nick = msg.prefix ? msg.prefix.split("!")[0] : "";
-          const channel = msg.trailing || msg.params[0];
-          this.emit("join", { nick, channel, raw: msg });
-        } else if (msg.command === "PART") {
-          const nick = msg.prefix ? msg.prefix.split("!")[0] : "";
-          const channel = msg.params[0];
-          this.emit("part", { nick, channel, reason: msg.trailing, raw: msg });
-        } else if (msg.command === "353") {
-          const channel = msg.params[2];
-          const users = msg.trailing ? msg.trailing.split(" ").filter(u => u) : [];
-          this.emit("names", { channel, users, raw: msg });
-        }
+    if (msg.command === "PING") { 
+      this.send(`PONG ${msg.trailing || msg.params[0]}`); 
+      return; 
+    }
+    
+    if (msg.command === "001") { 
+      this.connectionState = "connected"; 
+      this.emit("state", { state: "connected" }); 
+      this.emit("registered", msg); 
+      return; 
+    }
+    
+    if (msg.command === "PRIVMSG") {
+      const target = msg.params[0];
+      const sender = msg.prefix ? msg.prefix.split("!")[0] : "server";
+      this.emit("message", { 
+        from: sender, 
+        to: target, 
+        text: msg.trailing, 
+        isChannel: target.startsWith("#"), 
+        raw: msg 
       });
-    });
+    } else if (msg.command === "JOIN") {
+      const nick = msg.prefix ? msg.prefix.split("!")[0] : "";
+      const channel = msg.trailing || msg.params[0];
+      this.emit("join", { nick, channel, raw: msg });
+    } else if (msg.command === "PART") {
+      const nick = msg.prefix ? msg.prefix.split("!")[0] : "";
+      const channel = msg.params[0];
+      this.emit("part", { nick, channel, reason: msg.trailing, raw: msg });
+    } else if (msg.command === "353") {
+      const channel = msg.params[2];
+      const users = msg.trailing ? msg.trailing.split(" ").filter(u => u) : [];
+      this.emit("names", { channel, users, raw: msg });
+    }
+  });
+});
     
     this.ws.addEventListener("close", (evt) => {
   console.log('🔒 CONEXÃO FECHADA');
