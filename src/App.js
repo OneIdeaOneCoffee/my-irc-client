@@ -445,7 +445,12 @@ const handleAction = (action) => {
                   type="text"
                   value={commandInput}
                   onChange={(e) => setCommandInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSendMessage();
+                      e.preventDefault(); // evita comportamento padrão de Enter
+                    }
+                  }}
                   className="message-input"
                   placeholder="Digite sua mensagem para o consultor..."
                   maxLength={500}
@@ -458,7 +463,7 @@ const handleAction = (action) => {
                   <Send />
                 </button>
               </div>
-
+          
               {/* Botões de Ação */}
               <div className="quick-actions">
                 {ACTION_BUTTONS.map(({ action, label, icon }) => (
