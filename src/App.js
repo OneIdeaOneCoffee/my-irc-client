@@ -81,25 +81,41 @@ class IRCClient {
     this.ws = new window.WebSocket(url);
     
     this.ws.addEventListener("open", () => {
-      this.connectionState = "registering";
-      this.emit("state", { state: "registering" });
-      this.send(`NICK ${nick}`);
-      this.send(`USER ${user} 0 * :${realname}`);
-      this.startHeartbeat();
-    });
+  console.log('✅ WebSocket ABERTO');
+  this.connectionState = "registering";
+  this.emit("state", { state: "registering" });
+  console.log('→ Enviando NICK:', nick);
+  this.send(`NICK ${nick}`);
+  console.log('→ Enviando USER:', user);
+  this.send(`USER ${user} 0 * :${realname}`);
+  this.startHeartbeat();
+});
     
-    this.ws.addEventListener("message", (evt) => {
+this.ws.addEventListener("message", (evt) => {
   this.lastActivity = Date.now();
+  
+  // DEBUG: Ver o que o servidor está enviando
+  console.log('📦 FRAME RECEBIDO:', evt.data);
+  console.log('📦 TEM \\r\\n?', evt.data.includes('\r\n'));
+  console.log('📦 TAMANHO:', evt.data.length);
+  
   let lines = this.buffer.push(evt.data);
   
   // Se buffer não retornou linhas, trata como line-mode (UnrealIRCd)
   if (lines.length === 0 && evt.data.trim()) {
+    console.log('🔧 Processando como line-mode');
     lines = [evt.data.trim()];
-    this.buffer.clear(); // Limpa buffer pois não estamos usando modo stream
+    this.buffer.clear();
   }
   
-  lines.forEach((line) => {        
-
+  lines.forEach((line) => {
+    if (!line.trim()) return;
+    
+    console.log('🔍 PROCESSANDO LINHA:', line); // ← NOVO
+    
+    const msg = IRCParser.parse(line);
+    console.log('✅ PARSED:', msg); // ← NOVO
+    
 const msg = IRCParser.parse(line);
         
         if (msg.command === "PING") { 
@@ -140,17 +156,24 @@ const msg = IRCParser.parse(line);
       });
     });
     
-    this.ws.addEventListener("close", (evt) => { 
-      this.connectionState = "disconnected"; 
-      this.buffer.clear(); 
-      this.stopHeartbeat();
-      this.emit("state", { state: "disconnected", code: evt.code }); 
-    });
+    this.ws.addEventListener("close", (evt) => {
+  console.log('🔒 CONEXÃO FECHADA');
+  console.log('   Código:', evt.code);
+  console.log('   Razão:', evt.reason || 'nenhuma');
+  console.log('   Clean:', evt.wasClean);
+  
+  this.connectionState = "disconnected"; 
+  this.buffer.clear(); 
+  this.stopHeartbeat();
+  this.emit("state", { state: "disconnected", code: evt.code }); 
+});
     
     this.ws.addEventListener("error", (err) => {
-      this.emit("error", { type: err.type });
-    });
-  }
+  console.log('❌ ERRO WebSocket:', err);
+  console.log('   Tipo:', err.type);
+  console.log('   ReadyState:', this.ws?.readyState);
+  this.emit("error", { type: err.type });
+});
   
   startHeartbeat() {
     this.heartbeatInterval = setInterval(() => {
