@@ -1,0 +1,224 @@
+// App.js - VERSÃO CORRIGIDA E UNIFICADA
+import React, { useState, useRef, useEffect } from "react";
+import "./App.css";
+
+const Power = ({ size = 24 }) => <span style={{ fontWeight: "bold", fontSize: size }}>⏻</span>;
+const Send = ({ size = 20 }) => <span style={{ fontWeight: "bold", fontSize: size }}>↑</span>;
+const User = ({ size = 20 }) => <span style={{ fontWeight: "bold", fontSize: size }}>👤</span>;
+
+function App() {
+  const [connected, setConnected] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [nickname, setNickname] = useState("user" + Math.floor(Math.random() * 1000));
+  const [serverUrl, setServerUrl] = useState("wss://irc-ws.chat:443");
+  const wsRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const heartbeatRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      clearInterval(heartbeatRef.current);
+    };
+  }, []);
+
+  const connectWebSocket = () => {
+    if (!serverUrl) {
+      addLog("error", "Por favor, informe a URL do servidor.");
+      return;
+    }
+
+    try {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+
+      console.log("Conectando ao:", serverUrl);
+      const ws = new WebSocket(serverUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log("WebSocket conectado!");
+        setConnected(true);
+        addLog("system", `Conectado a ${serverUrl}`);
+
+        sendRawMessage(`NICK ${nickname}`);
+        sendRawMessage(`USER ${nickname} 0 * :React IRC Client`);
+
+        heartbeatRef.current = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            sendRawMessage("PING :heartbeat");
+          }
+        }, 30000);
+      };
+
+      ws.onmessage = (event) => {
+        console.log("Mensagem recebida:", event.data);
+        handleServerMessage(event.data);
+      };
+
+      ws.onerror = (error) => {
+        console.error("Erro WebSocket:", error);
+        addLog("error", `Erro de conexão: ${error.message || "Erro desconhecido"}`);
+      };
+
+      ws.onclose = (event) => {
+        console.log("Conexão fechada:", event.code, event.reason);
+        setConnected(false);
+        addLog("system", `Desconectado: ${event.reason || "Conexão fechada"}`);
+        clearInterval(heartbeatRef.current);
+      };
+
+    } catch (err) {
+      console.error("Erro na conexão:", err);
+      addLog("error", `Falha na conexão: ${err.message}`);
+    }
+  };
+
+  const handleServerMessage = (rawMessage) => {
+    const lines = rawMessage.split('\n').filter(line => line.trim());
+
+    lines.forEach(line => {
+      if (line.startsWith('PING')) {
+        const pingId = line.split(' ')[1] || ':heartbeat';
+        sendRawMessage(`PONG ${pingId}`);
+        return;
+      }
+
+      addLog("server", line);
+    });
+  };
+
+  const sendRawMessage = (msg) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      console.log("Enviando:", msg);
+      wsRef.current.send(msg + '\r\n');
+      addLog("client", msg);
+    } else {
+      addLog("error", "Não conectado ao servidor.");
+    }
+  };
+
+  const handleSendMessage = () => {
+    const message = input.trim();
+    if (!message) return;
+
+    if (message.startsWith('/')) {
+      sendRawMessage(message.slice(1));
+    } else {
+      sendRawMessage(`PRIVMSG #test :${message}`);
+    }
+
+    setInput("");
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const disconnect = () => {
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+    setConnected(false);
+    clearInterval(heartbeatRef.current);
+  };
+
+  const addLog = (type, text) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setMessages((prev) => [...prev, {
+      type,
+      text,
+      timestamp
+    }]);
+  };
+
+  return (
+    <div className="consultoria-app">
+      <header className="app-header">
+        <div className="header-content">
+          <h1>IRC Web Client</h1>
+          <div className="connection-status">
+            <span className={`status-indicator ${connected ? 'connected' : 'disconnected'}`} />
+            {connected ? `Conectado como ${nickname}` : 'Desconectado'}
+          </div>
+          <button
+            className={`connect-button ${connected ? 'disconnect' : 'connect'}`}
+            onClick={connected ? disconnect : connectWebSocket}
+          >
+            <Power /> {connected ? "Desconectar" : "Conectar"}
+          </button>
+        </div>
+      </header>
+
+      <div className="server-config">
+        <input
+          type="text"
+          placeholder="Servidor WebSocket (ex: wss://irc-ws.chat:443)"
+          value={serverUrl}
+          onChange={(e) => setServerUrl(e.target.value)}
+          disabled={connected}
+        />
+        <input
+          type="text"
+          placeholder="Apelido"
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          disabled={connected}
+        />
+      </div>
+
+      <div className="chat-container">
+        <div className="messages-container">
+          {messages.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">💬</div>
+              <h3>Bem-vindo ao IRC Client</h3>
+              <p>Configure o servidor e clique em Conectar para começar</p>
+            </div>
+          ) : (
+            messages.map((message, index) => (
+              <div key={index} className={`message-row ${message.type}`}>
+                <span className="timestamp">[{message.timestamp}]</span>
+                <span className="message-content">
+                  {message.type === "client" && <User />}
+                  {message.text}
+                </span>
+              </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="input-area">
+          <input
+            type="text"
+            placeholder={connected ? "Digite mensagem ou comando IRC..." : "Conecte-se para enviar mensagens..."}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={!connected}
+          />
+          <button
+            onClick={handleSendMessage}
+            disabled={!connected || !input.trim()}
+          >
+            <Send />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
