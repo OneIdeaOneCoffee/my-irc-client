@@ -161,7 +161,7 @@ class IRCClient {
   this.emit("error", { type: err.type });
 });
   
-  startHeartbeat() {
+  startHeartbeat(); {
     this.heartbeatInterval = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         const now = Date.now();
