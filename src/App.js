@@ -172,7 +172,7 @@ class IRCClient {
     }, 20000);
   }
   
-  stopHeartbeat() {
+  stopHeartbeat(); {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
